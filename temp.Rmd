@@ -36,4 +36,41 @@ df3 <- inner_join(df1, df2, by = c("Country"="Country", "Year"="Year"))
 df3
 ```
 
+```{r}
+df1_unique <- df1 %>% distinct(Country, Year, .keep_all = TRUE)
+df2_unique <- df2 %>% distinct(Country, Year, .keep_all = TRUE)
+
+df1
+df1_unique
+
+df2
+df2_unique
+
+df3 <- inner_join(df1_unique, df2_unique, by = c("Country"="Country", "Year"="Year"))
+
+```
+
+```{r}
+install.packages("corrplot")
+library("corrplot")
+
+df3_num <- df3 %>% select(-Country, -Year)
+
+cor_matrix <- cor(df3_num, use = "complete.obs")
+corrplot(cor_matrix, method = "circle")
+
+```
+```{r}
+corrplot(cor_matrix,
+         method = "color",         
+         type = "upper",           
+         addCoef.col = "black",   
+         tl.cex = 0.5,            
+         number.cex = 0.3)
+```
+
+once we just use mean or median, it might be fine? because 
+
+
+
 
