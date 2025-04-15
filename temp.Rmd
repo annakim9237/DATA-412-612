@@ -1,7 +1,6 @@
 ---
 title: "temp"
-author: "Nabiha M Chowdhury
-Nabiha M Chowdhury/ Anna Hyunjung Kim"
+author: "Nabiha M Chowdhury/ Anna Hyunjung Kim"
 date: "`r Sys.Date()`"
 output: html_document
 ---
@@ -20,8 +19,21 @@ library(dbplyr)
 ```{r data, message=FALSE, warning=FALSE}
 
 df1 <- read_csv("./data/global_energy_consumption.csv")
-df1
+df2 <- read_csv("./data/temperature.csv")
+#df1
 ```
 
+```{r}
+distinct(df1, Country)
+```
+
+```{r}
+distinct(df2, Country)
+
+distinct(inner_join(df1, df2, by = "Country"), Country)
+
+df3 <- inner_join(df1, df2, by = c("Country"="Country", "Year"="Year"))
+df3
+```
 
 
