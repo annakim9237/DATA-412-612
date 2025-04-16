@@ -1,0 +1,244 @@
+---
+title: "Data-clean"
+output: html_document
+---
+
+```{r}
+library(readxl)
+library(dplyr)
+library(tidyr)
+library(stringr)
+```
+
+## This document is for cleaning data from csv or Exel files.
+
+### File 1
+
+***File name: ***area_report_by_year.xlsx
+
+***Citation: ***State Level Household Debt Statistics 2003-2024, Federal Reserve Bank of New York, April 2025	
+
+***Source: ***New York Fed Consumer Credit Panel / Equifax	
+
+***Note: ***The data here exclude US Territories like Guam and the US Virgin Islands, as well as certain other areas. In addition, they are subject to sampling variation. As such, national and state totals here may not match those reported in the Quarterly Report on Household Debt and Credit. 		
+		
+
+| Sheet                        | Title                                                                 | Notes                                   |
+|-----------------------------|-----------------------------------------------------------------------|-----------------------------------------|
+| `population`                | Number of Consumers in NY Fed Consumer Credit Panel                   | 5% of population (18+ with Equifax)     |
+| `auto loan`                 | Auto Debt Balance per Capita                                          | 5% of the population                    |
+| `credit card`               | Credit Card Debt Balance per Capita                                   | 5% of the population                    |
+| `mortgage`                  | Mortgage Debt Balance per Capita (excluding HELOC)                    | 5% of the population                    |
+| `student loan`              | Student Loan Debt Balance per Capita                                  | 1% of the population                    |
+| `total`                     | Total Debt Balance per Capita                                         | 5% of the population                    |
+| `auto loan delinquency`     | % of Auto Loan Balance 90+ Days Delinquent                            | 5% of the population                    |
+| `credit card delinquency`   | % of Credit Card Balance 90+ Days Delinquent                          | 5% of the population                    |
+| `mortgage delinquency`      | % of Mortgage Balance 90+ Days Delinquent                             | 5% of the population                    |
+| `student loan delinquency`  | % of Student Loan Balance 90+ Days Delinquent (and in default)        | 1% of the population                    |
+
+
+```{r}
+file_path <- "new-data/area_report_by_year.xlsx"
+
+# There are many sheets so we should target it
+# But auto has diffefent format so we will seperate it
+target_sheets <- c(
+"creditcard",
+"mortgage",
+"student loan",
+"total",
+"auto_delinq",
+"creditcard_delinq",
+"mortgage_delinq",
+"studentloan_delinq"
+)
+
+auto <- read_excel(file_path, sheet = "auto", skip = 4, col_names = TRUE)
+
+for (sheet_name in target_sheets) {
+  
+  df_name <- gsub(" ", "_", sheet_name)
+  
+  # The real data start from 9 row in the xlxs file. 
+  df <- read_excel(file_path, sheet = sheet_name, skip = 8, col_names = TRUE)
+  
+  assign(df_name, df)
+  #print(df_name)
+}
+
+# After load the file, it's nice to check but I will make it # to make the document short.
+#auto
+#creditcard
+#mortgage
+#student_loan
+#total
+#auto_delinq
+#creditcard_delinq
+#mortgage_delinq
+#studentloan_delinq
+```
+
+```{r}
+creditcard_clean <- creditcard %>%
+  filter(!is.na(state)) %>%
+  mutate(
+    pre = rowMeans(select(., Q4_2017:Q4_2019), na.rm = TRUE),
+    post = rowMeans(select(., Q4_2020:Q4_2022), na.rm = TRUE)
+  ) %>%
+  select(state, pre, post) %>%
+  rename(
+    creditcard_pre = pre,
+    creditcard_post = post
+  )
+
+creditcard_clean
+```
+
+```{r}
+auto_clean <- auto %>%
+  filter(!is.na(state)) %>%
+  mutate(
+    pre = rowMeans(select(., Q4_2017:Q4_2019), na.rm = TRUE),
+    post = rowMeans(select(., Q4_2020:Q4_2022), na.rm = TRUE)
+  ) %>%
+  select(state, pre, post) %>%
+  rename(
+    auto_pre = pre,
+    auto_post = post
+  )
+
+auto_clean
+```
+```{r}
+mortgage_clean <- mortgage %>%
+  filter(!is.na(state)) %>%
+  mutate(
+    pre = rowMeans(select(., Q4_2017:Q4_2019), na.rm = TRUE),
+    post = rowMeans(select(., Q4_2020:Q4_2022), na.rm = TRUE)
+  ) %>%
+  select(state, pre, post) %>%
+  rename(
+    mortgage_pre = pre,
+    mortgage_post = post
+  )
+
+mortgage_clean
+```
+
+```{r}
+studentloan_clean <- student_loan %>%
+  filter(!is.na(state)) %>%
+  mutate(
+    pre = rowMeans(select(., Q4_2017:Q4_2019), na.rm = TRUE),
+    post = rowMeans(select(., Q4_2020:Q4_2022), na.rm = TRUE)
+  ) %>%
+  select(state, pre, post) %>%
+  rename(
+    studentloan_pre = pre,
+    studentloan_post = post
+  )
+
+studentloan_clean
+```
+
+```{r}
+total_clean <- total %>%
+  filter(!is.na(state)) %>%
+  mutate(
+    pre = rowMeans(select(., Q4_2017:Q4_2019), na.rm = TRUE),
+    post = rowMeans(select(., Q4_2020:Q4_2022), na.rm = TRUE)
+  ) %>%
+  select(state, pre, post) %>%
+  rename(
+    total_pre = pre,
+    total_post = post
+  )
+
+total_clean
+```
+
+```{r}
+creditcard_delinq_clean <- creditcard_delinq %>%
+  filter(!is.na(state)) %>%
+  mutate(
+    pre = rowMeans(select(., Q4_2017:Q4_2019), na.rm = TRUE),
+    post = rowMeans(select(., Q4_2020:Q4_2022), na.rm = TRUE)
+  ) %>%
+  select(state, pre, post) %>%
+  rename(
+    creditcard_delinq_pre = pre,
+    creditcard_delinq_post = post
+  )
+
+creditcard_delinq_clean
+```
+
+```{r}
+auto_delinq_clean <- auto_delinq %>%
+  filter(!is.na(state)) %>%
+  mutate(
+    pre = rowMeans(select(., Q4_2017:Q4_2019), na.rm = TRUE),
+    post = rowMeans(select(., Q4_2020:Q4_2022), na.rm = TRUE)
+  ) %>%
+  select(state, pre, post) %>%
+  rename(
+    auto_delinq_pre = pre,
+    auto_delinq_post = post
+  )
+
+auto_delinq_clean
+```
+
+```{r}
+mortgage_delinq_clean <- mortgage_delinq %>%
+  filter(!is.na(state)) %>%
+  mutate(
+    pre = rowMeans(select(., Q4_2017:Q4_2019), na.rm = TRUE),
+    post = rowMeans(select(., Q4_2020:Q4_2022), na.rm = TRUE)
+  ) %>%
+  select(state, pre, post) %>%
+  rename(
+    mortgage_delinq_pre = pre,
+    mortgage_delinq_post = post
+  )
+
+mortgage_delinq_clean
+```
+
+```{r}
+studentloan_delinq_clean <- studentloan_delinq %>%
+  filter(!is.na(state)) %>%
+  mutate(
+    pre = rowMeans(select(., Q4_2017:Q4_2019), na.rm = TRUE),
+    post = rowMeans(select(., Q4_2020:Q4_2022), na.rm = TRUE)
+  ) %>%
+  select(state, pre, post) %>%
+  rename(
+    studentloan_delinq_pre = pre,
+    studentloan_delinq_post = post
+  )
+
+studentloan_delinq_clean
+```
+
+```{r}
+
+#Join
+NYFED_df <- creditcard_clean %>%
+  left_join(auto_clean, by = "state") %>%
+  left_join(mortgage_clean, by = "state") %>%
+  left_join(studentloan_clean, by = "state") %>%
+  left_join(total_clean, by = "state") %>%
+  left_join(creditcard_delinq_clean, by = "state") %>%
+  left_join(auto_delinq_clean, by = "state") %>%
+  left_join(mortgage_delinq_clean, by = "state") %>%
+  left_join(studentloan_delinq_clean, by = "state")
+
+NYFED_df
+```
+
+```{r}
+# export to file but I will # because we already have sync folder with github
+#write.csv(NYFED_df, "new-data/data-clean/NYFED.csv", row.names = FALSE)
+```
+
