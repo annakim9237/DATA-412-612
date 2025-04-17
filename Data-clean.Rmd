@@ -91,7 +91,7 @@ creditcard_clean <- creditcard %>%
     creditcard_post = post
   )
 
-creditcard_clean
+head(creditcard_clean)
 ```
 
 ```{r}
@@ -107,7 +107,7 @@ auto_clean <- auto %>%
     auto_post = post
   )
 
-auto_clean
+head(auto_clean)
 ```
 ```{r}
 mortgage_clean <- mortgage %>%
@@ -122,7 +122,7 @@ mortgage_clean <- mortgage %>%
     mortgage_post = post
   )
 
-mortgage_clean
+head(mortgage_clean)
 ```
 
 ```{r}
@@ -138,7 +138,7 @@ studentloan_clean <- student_loan %>%
     studentloan_post = post
   )
 
-studentloan_clean
+head(studentloan_clean)
 ```
 
 ```{r}
@@ -154,7 +154,7 @@ total_clean <- total %>%
     total_post = post
   )
 
-total_clean
+head(total_clean)
 ```
 
 ```{r}
@@ -170,7 +170,7 @@ creditcard_delinq_clean <- creditcard_delinq %>%
     creditcard_delinq_post = post
   )
 
-creditcard_delinq_clean
+head(creditcard_delinq_clean)
 ```
 
 ```{r}
@@ -186,7 +186,7 @@ auto_delinq_clean <- auto_delinq %>%
     auto_delinq_post = post
   )
 
-auto_delinq_clean
+head(auto_delinq_clean)
 ```
 
 ```{r}
@@ -202,7 +202,7 @@ mortgage_delinq_clean <- mortgage_delinq %>%
     mortgage_delinq_post = post
   )
 
-mortgage_delinq_clean
+head(mortgage_delinq_clean)
 ```
 
 ```{r}
@@ -218,7 +218,7 @@ studentloan_delinq_clean <- studentloan_delinq %>%
     studentloan_delinq_post = post
   )
 
-studentloan_delinq_clean
+head(studentloan_delinq_clean)
 ```
 
 ```{r}
@@ -234,7 +234,7 @@ NYFED_df <- creditcard_clean %>%
   left_join(mortgage_delinq_clean, by = "state") %>%
   left_join(studentloan_delinq_clean, by = "state")
 
-NYFED_df
+head(NYFED_df)
 ```
 
 ```{r}
@@ -251,13 +251,13 @@ gdp_df <- read.csv("new-data/SAGDP1__ALL_AREAS_1997_2024.csv")
 
 gdp_real <- gdp_df %>%
   filter(Description == "Real GDP (millions of chained 2017 dollars) 1/")
-gdp_real
+head(gdp_real)
 
 gdp_df2 <- gdp_real %>%
   select(GeoName, X2017, X2018, X2019, X2020, X2021, X2022) %>%
   rename(state = GeoName)
 
-gdp_df2
+head(gdp_df2)
 ```
 ```{r}
 gdp_df3 <- gdp_df2 %>%
@@ -272,7 +272,7 @@ gdp_df4 <- gdp_df3 %>% select(state, gdp_pre, gdp_post)
 gdp_df4 <- gdp_df4 %>%
   filter(state != "United States")
 
-gdp_df4
+head(gdp_df4)
 ```
 
 ```{r}
@@ -294,4 +294,9 @@ gdp_final
 # export to file but I will # because we already have sync folder with github
 # write.csv(gdp_final, "new-data/data-clean/GDP.csv", row.names = FALSE)
 ```
+
+### File 3
+Personal Consumption Expenditures (PCE) by State: https://apps.bea.gov/regional/downloadzip.html
+
+File name: SAPCE1__ALL_AREAS_1997_2023.csv
 
