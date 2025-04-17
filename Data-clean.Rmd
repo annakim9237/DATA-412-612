@@ -242,3 +242,56 @@ NYFED_df
 #write.csv(NYFED_df, "new-data/data-clean/NYFED.csv", row.names = FALSE)
 ```
 
+### File 2
+***Real GDP***
+
+```{r}
+gdp_df <- read.csv("new-data/SAGDP1__ALL_AREAS_1997_2024.csv")
+#gdp_df
+
+gdp_real <- gdp_df %>%
+  filter(Description == "Real GDP (millions of chained 2017 dollars) 1/")
+gdp_real
+
+gdp_df2 <- gdp_real %>%
+  select(GeoName, X2017, X2018, X2019, X2020, X2021, X2022) %>%
+  rename(state = GeoName)
+
+gdp_df2
+```
+```{r}
+gdp_df3 <- gdp_df2 %>%
+  select(state, X2017, X2018, X2019, X2020, X2021, X2022) %>%
+  mutate(
+    gdp_pre = rowMeans(select(., X2017, X2018, X2019), na.rm = TRUE),
+    gdp_post = rowMeans(select(., X2020, X2021, X2022), na.rm = TRUE)
+  )
+
+gdp_df4 <- gdp_df3 %>% select(state, gdp_pre, gdp_post)
+
+gdp_df4 <- gdp_df4 %>%
+  filter(state != "United States")
+
+gdp_df4
+```
+
+```{r}
+# We need mapping with code 
+state_codes <- read.csv("https://raw.githubusercontent.com/jasonong/List-of-US-States/master/states.csv")
+
+#state_codes
+
+gdp_df5 <- gdp_df4 %>%
+  left_join(state_codes, by = c("state" = "State"))
+
+gdp_final <- gdp_df5 %>% 
+  select(Abbreviation, gdp_pre, gdp_post) %>% 
+  rename(State = Abbreviation )
+
+gdp_final
+```
+```{r}
+# export to file but I will # because we already have sync folder with github
+# write.csv(gdp_final, "new-data/data-clean/GDP.csv", row.names = FALSE)
+```
+
