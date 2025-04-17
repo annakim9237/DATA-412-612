@@ -245,6 +245,10 @@ head(NYFED_df)
 ### File 2
 ***Real GDP***
 
+Annual GDP by State : https://apps.bea.gov/regional/downloadzip.htm
+File name: SAGDP1__ALL_AREAS_1997_2024.csv
+
+
 ```{r}
 gdp_df <- read.csv("new-data/SAGDP1__ALL_AREAS_1997_2024.csv")
 #gdp_df
@@ -288,7 +292,7 @@ gdp_final <- gdp_df5 %>%
   select(Abbreviation, gdp_pre, gdp_post) %>% 
   rename(State = Abbreviation )
 
-gdp_final
+head(gdp_final)
 ```
 ```{r}
 # export to file but I will # because we already have sync folder with github
@@ -296,7 +300,96 @@ gdp_final
 ```
 
 ### File 3
-Personal Consumption Expenditures (PCE) by State: https://apps.bea.gov/regional/downloadzip.html
+***Personal Consumption Expenditures (PCE)***
+
+Personal Consumption Expenditures (PCE) by State: https://apps.bea.gov/regional/downloadzip.htm
 
 File name: SAPCE1__ALL_AREAS_1997_2023.csv
+
+```{r}
+pce <- read.csv("new-data/SAPCE1__ALL_AREAS_1997_2023.csv")
+#pce
+pce_df <- pce %>%
+  filter(Description == "Personal consumption expenditures ")
+
+head(pce_df)
+
+pce_df2 <- pce_df %>%
+  select(GeoName, X2017, X2018, X2019, X2020, X2021, X2022) %>%
+  rename(state = GeoName)
+
+#head(pce_df2)
+
+pce_df2 <- pce_df2 %>%
+  filter(state != "United States")
+
+head(pce_df2)
+```
+
+```{r}
+pce_df3 <- pce_df2 %>%
+  select(state, X2017, X2018, X2019, X2020, X2021, X2022) %>%
+  mutate(
+    pce_pre = rowMeans(select(., X2017, X2018, X2019), na.rm = TRUE),
+    pce_post = rowMeans(select(., X2020, X2021, X2022), na.rm = TRUE)
+  )
+
+pce_df4 <- pce_df3 %>% select(state, pce_pre, pce_post)
+pce_df4
+
+pce_df5 <- pce_df4 %>%
+  left_join(state_codes, by = c("state" = "State"))
+
+pce_final <- pce_df5 %>% 
+  select(Abbreviation, pce_pre, pce_post) %>% 
+  rename(State = Abbreviation )
+
+head(pce_final)
+```
+
+```{r}
+# export to file but I will # because we already have sync folder with github
+#write.csv(pce_final, "new-data/data-clean/PCE.csv", row.names = FALSE)
+```
+
+### File4
+**Annual Personal Income**
+
+Annual Personal Income by State: https://apps.bea.gov/regional/downloadzip.htm
+File name: SAINC1__ALL_AREAS_1929_2024.csv
+
+```{r}
+income <- read.csv("new-data/SAINC1__ALL_AREAS_1929_2024.csv")
+
+income_df1<- income %>%
+  filter(str_trim(Description) == "Per capita personal income (dollars) 2/")
+
+#income_df1
+
+income_df2 <- income_df1 %>%
+  select(GeoName, X2017, X2018, X2019, X2020, X2021, X2022) %>%
+  rename(state = GeoName) %>%
+  mutate(
+    income_pre = rowMeans(select(., X2017, X2018, X2019), na.rm = TRUE),
+    income_post = rowMeans(select(., X2020, X2021, X2022), na.rm = TRUE)
+  ) %>%
+  filter(state != "United States")
+
+income_df2
+```
+
+```{r}
+income_df3 <- income_df2 %>%
+  left_join(state_codes, by = c("state" = "State"))
+
+income_final <- income_df3%>% 
+  select(Abbreviation, income_pre, income_post) %>% 
+  rename(State = Abbreviation)
+
+head(income_final)
+```
+```{r}
+# export to file but I will # because we already have sync folder with github
+#write.csv(income_final, "new-data/data-clean/INCOME.csv", row.names = FALSE)
+```
 
