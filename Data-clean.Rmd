@@ -504,8 +504,8 @@ house3 <- house2 %>%
   mutate(
     zhvi_pre_avg = rowMeans(select(., `2017`, `2018`, `2019`), na.rm = TRUE),
     zhvi_post_avg = rowMeans(select(., `2020`, `2021`, `2022`), na.rm = TRUE),
-    zhvi_pre_change = (`2019` - `2017`) / `2017`,
-    zhvi_post_change = (`2022` - `2020`) / `2020`
+    zhvi_pre_change = ((`2019` - `2017`) / `2017`)*100,
+    zhvi_post_change = ((`2022` - `2020`) / `2020`)*100
   ) %>%
   select(State, zhvi_pre_avg, zhvi_post_avg, zhvi_pre_change, zhvi_post_change)
 
@@ -522,6 +522,6 @@ house_final
 ```
 ```{r}
 # export to file but I will # because we already have sync folder with github
-#write.csv(house_final, "new-data/data-clean/HOUSING.csv", row.names = FALSE)
+# write.csv(house_final, "new-data/data-clean/HOUSING.csv", row.names = FALSE)
 ```
 
