@@ -43,6 +43,7 @@ file_path <- "new-data/area_report_by_year.xlsx"
 # There are many sheets so we should target it
 # But auto has diffefent format so we will seperate it
 target_sheets <- c(
+"population",
 "creditcard",
 "mortgage",
 "student loan",
@@ -67,6 +68,7 @@ for (sheet_name in target_sheets) {
 }
 
 # After load the file, it's nice to check but I will make it # to make the document short.
+#population
 #auto
 #creditcard
 #mortgage
@@ -77,6 +79,22 @@ for (sheet_name in target_sheets) {
 #mortgage_delinq
 #studentloan_delinq
 ```
+```{r}
+population_clean <- population %>%
+  filter(!is.na(state)) %>%
+  mutate(
+    pre = rowMeans(select(., Q4_2017:Q4_2019), na.rm = TRUE),
+    post = rowMeans(select(., Q4_2020:Q4_2022), na.rm = TRUE)
+  ) %>%
+  select(state, pre, post) %>%
+  rename(
+    population_pre = pre,
+    population_post = post
+  )
+
+head(population_clean)
+```
+
 
 ```{r}
 creditcard_clean <- creditcard %>%
@@ -224,7 +242,8 @@ head(studentloan_delinq_clean)
 ```{r}
 
 #Join
-NYFED_df <- creditcard_clean %>%
+NYFED_df <- population_clean %>%
+  left_join(creditcard_clean, by = "state") %>%
   left_join(auto_clean, by = "state") %>%
   left_join(mortgage_clean, by = "state") %>%
   left_join(studentloan_clean, by = "state") %>%
@@ -395,33 +414,44 @@ head(income_final)
 
 ### File5
 
-```{r}
-pop <- read.csv("new-data/Population by Age and Sex - US, States, Counties.csv")
+Unemployment rate by state
+```{r, warning=FALSE}
 
-#names(pop)
+unemploy <- read_excel("new-data/unemployment rate.xlsx", range = "A1:DR53")
+names(unemploy)[-1] <- as.character(as.Date(as.numeric(names(unemploy)[-1]), origin = "1899-12-30"))
 
-pop_df <- pop %>%
-  select(Description, Year, 
-         Population_18_54 = "Population.18.54", 
-         Population_55_plus = "Population.55.", 
-         Population_65_plus = "Population.65.", 
-         Population_Under_18 = "Population.Under.18", 
-         Population_0_4 = "Population.0.4") %>%
-  rename(state = Description)
+pre_df <- unemploy %>%
+  select(State, matches("2017|2018|2019"))
+#pre_df 
 
-head(pop_df)
+post_df <- unemploy %>%
+  select(State, matches("2020|2021|2022"))
+
+# there were some chr
+pre_df_numeric <- pre_df %>%
+  mutate(across(-State, ~ as.numeric(.)))
+# there were some chr
+post_df_clean <- post_df %>%
+  mutate(across(-State, as.numeric))  
+
+# Average
+pre_avg <- pre_df_numeric %>%
+  mutate(unemp_pre = rowMeans(select(., -State), na.rm = TRUE)) %>%
+  select(State, unemp_pre)
+
+post_avg <- post_df_clean %>%
+  mutate(unemp_post = rowMeans(select(., -State), na.rm = TRUE)) %>%
+  select(State, unemp_post)
+
+unemploy_final <- pre_avg %>%
+  inner_join(post_avg, by = "State")
+
+# Join
+unemploy_final 
 ```
+
 ```{r}
-pop_df1 <- pop_df %>%
-  filter(Year %in% 2017:2022)
-
-head(pop_df1)
-
-
-pop_df2 <- pop_df1 %>%
-  filter(!str_detect(state, ",")) %>%
-  filter(state != "U.S.")
-
-pop_df2
+# export to file but I will # because we already have sync folder with github
+#write.csv(unemploy_final , "new-data/data-clean/UNEMPLOY.csv", row.names = FALSE)
 ```
 
