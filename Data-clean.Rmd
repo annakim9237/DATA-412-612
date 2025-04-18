@@ -393,3 +393,35 @@ head(income_final)
 #write.csv(income_final, "new-data/data-clean/INCOME.csv", row.names = FALSE)
 ```
 
+### File5
+
+```{r}
+pop <- read.csv("new-data/Population by Age and Sex - US, States, Counties.csv")
+
+#names(pop)
+
+pop_df <- pop %>%
+  select(Description, Year, 
+         Population_18_54 = "Population.18.54", 
+         Population_55_plus = "Population.55.", 
+         Population_65_plus = "Population.65.", 
+         Population_Under_18 = "Population.Under.18", 
+         Population_0_4 = "Population.0.4") %>%
+  rename(state = Description)
+
+head(pop_df)
+```
+```{r}
+pop_df1 <- pop_df %>%
+  filter(Year %in% 2017:2022)
+
+head(pop_df1)
+
+
+pop_df2 <- pop_df1 %>%
+  filter(!str_detect(state, ",")) %>%
+  filter(state != "U.S.")
+
+pop_df2
+```
+
