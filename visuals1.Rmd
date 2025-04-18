@@ -13,13 +13,17 @@ library(readxl)
 library(dplyr)
 library(tidyr)
 library(stringr)
-file_path <- "new-data/data-clean/area_report_by_year.xlsx"
-auto <- read_excel(file_path, sheet = "auto", skip = 4, col_names = TRUE)
+file_path <- "new-data/data-clean/NYFED.csv"
 
 ```
 
 ## Visuals for data
 ```{r}
+
+df <- read_csv(file_path)
+df 
+
+names(df)
 debt_avg <- data.frame(
   type = c("Auto", "Credit Card", "Mortgage", "Student Loan", "Total"),
   pre = c(mean(auto_clean$auto_pre), mean(creditcard_clean$creditcard_pre),
