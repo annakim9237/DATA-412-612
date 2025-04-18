@@ -1,0 +1,88 @@
+---
+title: "data visuals"
+author: "Nabiha Chowdhury"
+date: "2025-04-18"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+library(tidyverse)
+library(readxl)
+library(dplyr)
+library(tidyr)
+library(stringr)
+file_path <- "new-data/data-clean/area_report_by_year.xlsx"
+auto <- read_excel(file_path, sheet = "auto", skip = 4, col_names = TRUE)
+
+```
+
+## Visuals for data
+```{r}
+debt_avg <- data.frame(
+  type = c("Auto", "Credit Card", "Mortgage", "Student Loan", "Total"),
+  pre = c(mean(auto_clean$auto_pre), mean(creditcard_clean$creditcard_pre),
+          mean(mortgage_clean$mortgage_pre), mean(studentloan_clean$studentloan_pre),
+          mean(total_clean$total_pre)),
+  post = c(mean(auto_clean$auto_post), mean(creditcard_clean$creditcard_post),
+           mean(mortgage_clean$mortgage_post), mean(studentloan_clean$studentloan_post),
+           mean(total_clean$total_post))
+) %>%
+  pivot_longer(cols = c("pre", "post"), names_to = "period", values_to = "amount")
+
+debt_avg
+
+ggplot(debt_avg, aes(x = type, y = amount, fill = period)) +
+  geom_col(position = "dodge") +
+  scale_y_continuous(labels = scales::dollar_format()) +
+  labs(title = "Average Debt per Capita by Type (Pre vs Post)", x = "Debt Type", y = "Amount") +
+  scale_fill_manual(values = c("pre" = "skyblue", "post" = "darkblue"))
+```
+
+
+```{r}
+delinq_avg <- data.frame(
+  type = c("Auto", "Credit Card", "Mortgage"),
+  pre = c(mean(auto_delinq_clean$auto_delinq_pre),
+          mean(creditcard_delinq_clean$creditcard_delinq_pre),
+          mean(mortgage_delinq_clean$mortgage_delinq_pre)),
+  post = c(mean(auto_delinq_clean$auto_delinq_post),
+           mean(creditcard_delinq_clean$creditcard_delinq_post),
+           mean(mortgage_delinq_clean$mortgage_delinq_post))
+) %>%
+  pivot_longer(cols = c("pre", "post"), names_to = "period", values_to = "rate")
+
+ggplot(delinq_avg, aes(x = type, y = rate, fill = period)) +
+  geom_col(position = "dodge") +
+  labs(title = "Delinquency Rates by Loan Type (Pre vs Post)", x = "Loan Type", y = "% Delinquent") +
+  scale_fill_manual(values = c("pre" = "orange", "post" = "red"))
+```
+
+
+```{r}
+cc_scatter <- creditcard_clean %>%
+  left_join(creditcard_delinq_clean, by = "state")
+
+ggplot(cc_scatter, aes(x = creditcard_post, y = creditcard_delinq_post)) +
+  geom_point(color = "purple", size = 3) +
+  geom_smooth(method = "lm", se = FALSE, color = "darkred") +
+  labs(title = "Credit Card Debt vs. Delinquency Rate (Post-COVID)",
+       x = "Debt per Capita ($)", y = "Delinquency Rate (%)")
+```
+
+
+```{r}
+library(forcats)
+
+top10 <- total_clean %>%
+  top_n(10, total_post) %>%
+  mutate(state = fct_reorder(state, total_post))
+
+ggplot(top10, aes(x = state, y = total_post)) +
+  geom_col(fill = "darkgreen") +
+  coord_flip() +
+  labs(title = "Top 10 States by Total Debt (Post-COVID)", y = "Debt per Capita", x = "State") +
+  scale_y_continuous(labels = scales::dollar_format())
+```
+
