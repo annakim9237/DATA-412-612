@@ -37,7 +37,7 @@ library(stringr)
 | `student loan delinquency`  | % of Student Loan Balance 90+ Days Delinquent (and in default)        | 1% of the population                    |
 
 
-```{r}
+```{r, warning=FALSE, message=FALSE}
 file_path <- "new-data/area_report_by_year.xlsx"
 
 # There are many sheets so we should target it
@@ -79,7 +79,7 @@ for (sheet_name in target_sheets) {
 #mortgage_delinq
 #studentloan_delinq
 ```
-```{r}
+```{r, warning=FALSE, message=FALSE}
 population_clean <- population %>%
   filter(!is.na(state)) %>%
   mutate(
@@ -96,7 +96,7 @@ head(population_clean)
 ```
 
 
-```{r}
+```{r, warning=FALSE, message=FALSE}
 creditcard_clean <- creditcard %>%
   filter(!is.na(state)) %>%
   mutate(
@@ -112,7 +112,7 @@ creditcard_clean <- creditcard %>%
 head(creditcard_clean)
 ```
 
-```{r}
+```{r, warning=FALSE, message=FALSE}
 auto_clean <- auto %>%
   filter(!is.na(state)) %>%
   mutate(
@@ -127,7 +127,7 @@ auto_clean <- auto %>%
 
 head(auto_clean)
 ```
-```{r}
+```{r, warning=FALSE, message=FALSE}
 mortgage_clean <- mortgage %>%
   filter(!is.na(state)) %>%
   mutate(
@@ -143,7 +143,7 @@ mortgage_clean <- mortgage %>%
 head(mortgage_clean)
 ```
 
-```{r}
+```{r, warning=FALSE, message=FALSE}
 studentloan_clean <- student_loan %>%
   filter(!is.na(state)) %>%
   mutate(
@@ -159,7 +159,7 @@ studentloan_clean <- student_loan %>%
 head(studentloan_clean)
 ```
 
-```{r}
+```{r, warning=FALSE, message=FALSE}
 total_clean <- total %>%
   filter(!is.na(state)) %>%
   mutate(
@@ -175,7 +175,7 @@ total_clean <- total %>%
 head(total_clean)
 ```
 
-```{r}
+```{r, warning=FALSE, message=FALSE}
 creditcard_delinq_clean <- creditcard_delinq %>%
   filter(!is.na(state)) %>%
   mutate(
@@ -191,7 +191,7 @@ creditcard_delinq_clean <- creditcard_delinq %>%
 head(creditcard_delinq_clean)
 ```
 
-```{r}
+```{r, warning=FALSE, message=FALSE}
 auto_delinq_clean <- auto_delinq %>%
   filter(!is.na(state)) %>%
   mutate(
@@ -207,7 +207,7 @@ auto_delinq_clean <- auto_delinq %>%
 head(auto_delinq_clean)
 ```
 
-```{r}
+```{r, warning=FALSE, message=FALSE}
 mortgage_delinq_clean <- mortgage_delinq %>%
   filter(!is.na(state)) %>%
   mutate(
@@ -223,7 +223,7 @@ mortgage_delinq_clean <- mortgage_delinq %>%
 head(mortgage_delinq_clean)
 ```
 
-```{r}
+```{r, warning=FALSE, message=FALSE}
 studentloan_delinq_clean <- studentloan_delinq %>%
   filter(!is.na(state)) %>%
   mutate(
@@ -239,7 +239,7 @@ studentloan_delinq_clean <- studentloan_delinq %>%
 head(studentloan_delinq_clean)
 ```
 
-```{r}
+```{r, warning=FALSE, message=FALSE}
 
 #Join
 NYFED_df <- population_clean %>%
@@ -256,7 +256,7 @@ NYFED_df <- population_clean %>%
 head(NYFED_df)
 ```
 
-```{r}
+```{r, warning=FALSE, message=FALSE}
 # export to file but I will # because we already have sync folder with github
 #write.csv(NYFED_df, "new-data/data-clean/NYFED.csv", row.names = FALSE)
 ```
@@ -268,7 +268,7 @@ Annual GDP by State : https://apps.bea.gov/regional/downloadzip.htm
 File name: SAGDP1__ALL_AREAS_1997_2024.csv
 
 
-```{r}
+```{r, warning=FALSE, message=FALSE}
 gdp_df <- read.csv("new-data/SAGDP1__ALL_AREAS_1997_2024.csv")
 #gdp_df
 
@@ -282,7 +282,7 @@ gdp_df2 <- gdp_real %>%
 
 head(gdp_df2)
 ```
-```{r}
+```{r, warning=FALSE, message=FALSE}
 gdp_df3 <- gdp_df2 %>%
   select(state, X2017, X2018, X2019, X2020, X2021, X2022) %>%
   mutate(
@@ -298,7 +298,7 @@ gdp_df4 <- gdp_df4 %>%
 head(gdp_df4)
 ```
 
-```{r}
+```{r, warning=FALSE, message=FALSE}
 # We need mapping with code 
 state_codes <- read.csv("https://raw.githubusercontent.com/jasonong/List-of-US-States/master/states.csv")
 
@@ -313,7 +313,7 @@ gdp_final <- gdp_df5 %>%
 
 head(gdp_final)
 ```
-```{r}
+```{r, warning=FALSE, message=FALSE}
 # export to file but I will # because we already have sync folder with github
 # write.csv(gdp_final, "new-data/data-clean/GDP.csv", row.names = FALSE)
 ```
@@ -325,7 +325,7 @@ Personal Consumption Expenditures (PCE) by State: https://apps.bea.gov/regional/
 
 File name: SAPCE1__ALL_AREAS_1997_2023.csv
 
-```{r}
+```{r, warning=FALSE, message=FALSE}
 pce <- read.csv("new-data/SAPCE1__ALL_AREAS_1997_2023.csv")
 #pce
 pce_df <- pce %>%
@@ -345,7 +345,7 @@ pce_df2 <- pce_df2 %>%
 head(pce_df2)
 ```
 
-```{r}
+```{r, warning=FALSE, message=FALSE}
 pce_df3 <- pce_df2 %>%
   select(state, X2017, X2018, X2019, X2020, X2021, X2022) %>%
   mutate(
@@ -366,7 +366,7 @@ pce_final <- pce_df5 %>%
 head(pce_final)
 ```
 
-```{r}
+```{r, warning=FALSE, message=FALSE}
 # export to file but I will # because we already have sync folder with github
 #write.csv(pce_final, "new-data/data-clean/PCE.csv", row.names = FALSE)
 ```
@@ -377,7 +377,7 @@ head(pce_final)
 Annual Personal Income by State: https://apps.bea.gov/regional/downloadzip.htm
 File name: SAINC1__ALL_AREAS_1929_2024.csv
 
-```{r}
+```{r, warning=FALSE, message=FALSE}
 income <- read.csv("new-data/SAINC1__ALL_AREAS_1929_2024.csv")
 
 income_df1<- income %>%
@@ -397,7 +397,7 @@ income_df2 <- income_df1 %>%
 income_df2
 ```
 
-```{r}
+```{r, warning=FALSE, message=FALSE}
 income_df3 <- income_df2 %>%
   left_join(state_codes, by = c("state" = "State"))
 
@@ -407,7 +407,7 @@ income_final <- income_df3%>%
 
 head(income_final)
 ```
-```{r}
+```{r, warning=FALSE, message=FALSE}
 # export to file but I will # because we already have sync folder with github
 #write.csv(income_final, "new-data/data-clean/INCOME.csv", row.names = FALSE)
 ```
@@ -415,7 +415,7 @@ head(income_final)
 ### File5
 
 Unemployment rate by state
-```{r, warning=FALSE}
+```{r, warning=FALSE, message=FALSE}
 
 unemploy <- read_excel("new-data/unemployment rate.xlsx", range = "A1:DR53")
 names(unemploy)[-1] <- as.character(as.Date(as.numeric(names(unemploy)[-1]), origin = "1899-12-30"))
@@ -443,15 +443,85 @@ post_avg <- post_df_clean %>%
   mutate(unemp_post = rowMeans(select(., -State), na.rm = TRUE)) %>%
   select(State, unemp_post)
 
-unemploy_final <- pre_avg %>%
+unemploy2 <- pre_avg %>%
   inner_join(post_avg, by = "State")
 
-# Join
-unemploy_final 
+unemploy3 <- unemploy2%>%
+  left_join(state_codes, by = c("State" = "State"))
+
+unemploy_final <- unemploy3 %>% 
+  select(Abbreviation, unemp_pre, unemp_post) %>% 
+  rename(State = Abbreviation)
+
+
+unemploy_final
 ```
 
-```{r}
+```{r, warning=FALSE, message=FALSE}
 # export to file but I will # because we already have sync folder with github
 #write.csv(unemploy_final , "new-data/data-clean/UNEMPLOY.csv", row.names = FALSE)
+```
+
+### File6
+
+Housing data: https://www.zillow.com/research/data/
+File name: State_zhvi_uc_sfrcondo_tier_0.33_0.67_sm_sa_month.csv
+
+```{r, warning=FALSE, message=FALSE}
+house <- read_csv("new-data/State_zhvi_uc_sfrcondo_tier_0.33_0.67_sm_sa_month.csv")
+
+house1 <- house %>%
+  rename(State = RegionName) %>%
+  select(-StateName, -RegionID, -SizeRank, -RegionType)
+```
+
+```{r, warning=FALSE, message=FALSE}
+house_long <- house1 %>%
+  pivot_longer(cols = -State, names_to = "Date", values_to = "ZHVI")
+#house_long
+
+house_long1 <- house_long %>%
+  filter(str_sub(Date, 1, 4) %in% c("2017", "2018", "2019", "2020", "2021", "2022"))
+
+#house_long1
+
+house_long2 <- house_long1 %>%
+  mutate(year = as.numeric(str_sub(Date, 1, 4)))
+
+house_avg <- house_long1 %>%
+  group_by(State, year) %>%
+  summarise(mean_zhvi = mean(ZHVI, na.rm = TRUE), .groups = "drop")
+
+#house_avg
+
+house2 <- house_avg %>%
+  pivot_wider(names_from = year, values_from = mean_zhvi)
+
+house2
+```
+```{r, warning=FALSE, message=FALSE}
+house3 <- house2 %>%
+  mutate(
+    zhvi_pre_avg = rowMeans(select(., `2017`, `2018`, `2019`), na.rm = TRUE),
+    zhvi_post_avg = rowMeans(select(., `2020`, `2021`, `2022`), na.rm = TRUE),
+    zhvi_pre_change = (`2019` - `2017`) / `2017`,
+    zhvi_post_change = (`2022` - `2020`) / `2020`
+  ) %>%
+  select(State, zhvi_pre_avg, zhvi_post_avg, zhvi_pre_change, zhvi_post_change)
+
+#house3
+
+house4 <- house3 %>%
+  left_join(state_codes, by = c("State" = "State"))
+
+house_final <- house4  %>%
+  select(Abbreviation, zhvi_pre_avg, zhvi_post_avg, zhvi_pre_change, zhvi_post_change) %>%
+  rename(State = Abbreviation)
+
+house_final 
+```
+```{r}
+# export to file but I will # because we already have sync folder with github
+#write.csv(house_final, "new-data/data-clean/HOUSING.csv", row.names = FALSE)
 ```
 
