@@ -1,0 +1,73 @@
+---
+title: "With-Final-data-set"
+author: "Anna Hyunjung Kim"
+date: "`r Sys.Date()`"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r, warning=FALSE, message=FALSE}
+library(readxl)
+library(dplyr)
+library(tidyr)
+library(stringr)
+library(readr)
+```
+
+# Final Data Join
+
+```{r, warning=FALSE, message=FALSE}
+clean_gdp <- read_csv("data/data-clean/GDP.csv")
+clean_income <- read_csv("data/data-clean/INCOME.csv")
+clean_nyfed <- read_csv("data/data-clean/NYFED.csv")
+clean_pce <- read_csv("data/data-clean/PCE.csv")
+clean_unemploy <- read_csv("data/data-clean/UNEMPLOY.csv")
+clean_housing<- read_csv("data/data-clean/HOUSING.csv")
+
+#clean_gdp 
+#clean_income
+#clean_nyfed 
+#clean_pce 
+#clean_unemploy 
+
+clean_nyfed  <- clean_nyfed  %>%
+  rename(State = state)
+
+# Find common states
+common_states <- Reduce(intersect, list(
+  clean_gdp$State,
+  clean_income$State,
+  clean_pce$State,
+  clean_nyfed$State,
+  clean_unemploy$State,
+  clean_housing$State
+))
+
+# Apply only common state
+clean_gdp <- clean_gdp %>% filter(State %in% common_states)
+clean_income <- clean_income %>% filter(State %in% common_states)
+clean_pce <- clean_pce %>% filter(State %in% common_states)
+clean_nyfed <- clean_nyfed %>% filter(State %in% common_states)
+clean_unemploy <- clean_unemploy %>% filter(State %in% common_states)
+clean_housing <- clean_housing %>% filter(State %in% common_states)
+
+# Merge to one data set
+merged_df <- clean_housing %>%
+  left_join(clean_gdp, by = "State") %>%
+  left_join(clean_income, by = "State") %>%
+  left_join(clean_pce, by = "State") %>%
+  left_join(clean_nyfed, by = "State") %>%
+  left_join(clean_unemploy, by = "State")
+
+merged_df
+```
+```{r}
+# export to file but I will # because we already have sync folder with github
+# write.csv(merged_df, "data/data-clean/FINAL.csv", row.names = FALSE)
+```
+
+
+

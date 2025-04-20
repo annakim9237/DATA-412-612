@@ -1,0 +1,435 @@
+---
+title: "Data-Clean"
+output: html_document
+---
+
+```{r}
+library(readxl)
+library(dplyr)
+library(tidyr)
+library(stringr)
+```
+
+``
+
+## This document is for cleaning data from csv or Exel files.
+
+### File 1
+
+***File name: ***area_report_by_year.xlsx
+
+***Citation: ***State Level Household Debt Statistics 2003-2024, Federal Reserve Bank of New York, April 2025	
+
+***Source: ***New York Fed Consumer Credit Panel / Equifax	
+
+***Note: ***The data here exclude US Territories like Guam and the US Virgin Islands, as well as certain other areas. In addition, they are subject to sampling variation. As such, national and state totals here may not match those reported in the Quarterly Report on Household Debt and Credit. 		
+		
+
+| Sheet                        | Title                                                                 | Notes                                   |
+|-----------------------------|-----------------------------------------------------------------------|-----------------------------------------|
+| `population`                | Number of Consumers in NY Fed Consumer Credit Panel                   | 5% of population (18+ with Equifax)     |
+| `auto loan`                 | Auto Debt Balance per Capita                                          | 5% of the population                    |
+| `credit card`               | Credit Card Debt Balance per Capita                                   | 5% of the population                    |
+| `mortgage`                  | Mortgage Debt Balance per Capita (excluding HELOC)                    | 5% of the population                    |
+| `student loan`              | Student Loan Debt Balance per Capita                                  | 1% of the population                    |
+| `total`                     | Total Debt Balance per Capita                                         | 5% of the population                    |
+| `auto loan delinquency`     | % of Auto Loan Balance 90+ Days Delinquent                            | 5% of the population                    |
+| `credit card delinquency`   | % of Credit Card Balance 90+ Days Delinquent                          | 5% of the population                    |
+| `mortgage delinquency`      | % of Mortgage Balance 90+ Days Delinquent                             | 5% of the population                    |
+| `student loan delinquency`  | % of Student Loan Balance 90+ Days Delinquent (and in default)        | 1% of the population                    |
+
+
+```{r, warning=FALSE, message=FALSE}
+file_path <- "data/area_report_by_year.xlsx"
+
+# There are many sheets so we should target it
+# But auto has diffefent format so we will seperate it
+target_sheets <- c(
+"population",
+"creditcard",
+"mortgage",
+"student loan",
+"total",
+"auto_delinq",
+"creditcard_delinq",
+"mortgage_delinq",
+"studentloan_delinq"
+)
+
+# auto has different format so seperated
+auto <- read_excel(file_path, sheet = "auto", skip = 4, col_names = TRUE)
+#auto
+for (sheet_name in target_sheets) {
+  
+  df_name <- gsub(" ", "_", sheet_name)
+  
+  # The real data start from 9 row in the xlxs file. 
+  df <- read_excel(file_path, sheet = sheet_name, skip = 8, col_names = TRUE)
+  
+  assign(df_name, df)
+  #print(df_name)
+}
+
+# After load the file, it's nice to check but I will make it # to make the document short.
+#population
+#auto
+#creditcard
+#mortgage
+#student_loan
+#total
+#auto_delinq
+#creditcard_delinq
+#mortgage_delinq
+#studentloan_delinq
+```
+
+```{r, warning=FALSE, message=FALSE}
+#population
+population_clean <- population %>%
+  filter(!is.na(state)) %>%
+  mutate(
+    population_pre = ((Q4_2019 - Q4_2017) / Q4_2017) * 100,
+    population_post = ((Q4_2022 - Q4_2020) / Q4_2020) * 100
+  ) %>%
+  select(state, population_pre, population_post)
+
+population_clean
+```
+
+```{r, warning=FALSE, message=FALSE}
+creditcard_clean <- creditcard %>%
+  filter(!is.na(state)) %>%
+  mutate(
+    creditcard_pre = ((Q4_2019 - Q4_2017) / Q4_2017) * 100,
+    creditcard_post = ((Q4_2022 - Q4_2020) / Q4_2020) * 100
+  ) %>%
+  select(state, creditcard_pre, creditcard_post)
+
+creditcard_clean
+```
+
+
+```{r, warning=FALSE, message=FALSE}
+auto_clean <- auto %>%
+  filter(!is.na(state)) %>%
+  mutate(
+    auto_pre = ((Q4_2019 - Q4_2017) / Q4_2017) * 100,
+    auto_post = ((Q4_2022 - Q4_2020) / Q4_2020) * 100
+  ) %>%
+  select(state, auto_pre, auto_post)
+
+auto_clean
+```
+
+```{r, warning=FALSE, message=FALSE}
+mortgage_clean <- mortgage %>%
+  filter(!is.na(state)) %>%
+  mutate(
+    mortgage_pre = ((Q4_2019 - Q4_2017) / Q4_2017) * 100,
+    mortgage_post = ((Q4_2022 - Q4_2020) / Q4_2020) * 100
+  ) %>%
+  select(state, mortgage_pre, mortgage_post)
+
+mortgage_clean
+```
+
+```{r, warning=FALSE, message=FALSE}
+studentloan_clean <- student_loan %>%
+  filter(!is.na(state)) %>%
+  mutate(
+    studentloan_pre = ((Q4_2019 - Q4_2017) / Q4_2017) * 100,
+    studentloan_post = ((Q4_2022 - Q4_2020) / Q4_2020) * 100
+  ) %>%
+  select(state, studentloan_pre, studentloan_post)
+
+studentloan_clean
+```
+
+```{r, warning=FALSE, message=FALSE}
+total_clean <- total %>%
+  filter(!is.na(state)) %>%
+  mutate(
+    total_pre = ((Q4_2019 - Q4_2017) / Q4_2017) * 100,
+    total_post = ((Q4_2022 - Q4_2020) / Q4_2020) * 100
+  ) %>%
+  select(state, total_pre, total_post)
+
+total_clean 
+```
+
+
+```{r, warning=FALSE, message=FALSE}
+creditcard_delinq_clean <- creditcard_delinq %>%
+  filter(!is.na(state)) %>%
+  select(state, Q4_2019, Q4_2022) %>%
+  rename(
+    creditcard_delinq_pre = Q4_2019,
+    creditcard_delinq_post = Q4_2022
+  )
+
+creditcard_delinq_clean
+
+```
+
+```{r, warning=FALSE, message=FALSE}
+auto_delinq_clean <- auto_delinq %>%
+  filter(!is.na(state)) %>%
+  select(state, Q4_2019, Q4_2022) %>%
+  rename(
+    auto_delinq_pre = Q4_2019,
+    auto_delinq_post = Q4_2022
+  )
+
+auto_delinq_clean
+```
+
+```{r, warning=FALSE, message=FALSE}
+mortgage_delinq_clean <- mortgage_delinq %>%
+  filter(!is.na(state)) %>%
+  select(state, Q4_2019, Q4_2022) %>%
+  rename(
+    mortgage_delinq_pre = Q4_2019,
+    mortgage_delinq_post = Q4_2022
+  )
+
+mortgage_delinq_clean
+```
+
+```{r, warning=FALSE, message=FALSE}
+studentloan_delinq_clean <- studentloan_delinq %>%
+  filter(!is.na(state)) %>%
+  select(state, Q4_2019, Q4_2022) %>%
+  rename(
+    studentloan_delinq_pre = Q4_2019,
+    studentloan_delinq_post = Q4_2022
+  )
+
+studentloan_delinq_clean
+```
+
+```{r, warning=FALSE, message=FALSE}
+NYFED_df <- population_clean %>%
+  left_join(creditcard_clean, by = "state") %>%
+  left_join(auto_clean, by = "state") %>%
+  left_join(mortgage_clean, by = "state") %>%
+  left_join(studentloan_clean, by = "state") %>%
+  left_join(total_clean, by = "state") %>%
+  left_join(creditcard_delinq_clean, by = "state") %>%
+  left_join(auto_delinq_clean, by = "state") %>%
+  left_join(mortgage_delinq_clean, by = "state") %>%
+  left_join(studentloan_delinq_clean, by = "state")
+
+head(NYFED_df)
+```
+```{r, warning=FALSE, message=FALSE}
+# Export final result if needed
+#write.csv(NYFED_df, "data/data-clean/NYFED.csv", row.names = FALSE)
+```
+
+### File 2
+***Real GDP***
+
+Annual GDP by State : https://apps.bea.gov/regional/downloadzip.htm
+File name: SAGDP1__ALL_AREAS_1997_2024.csv
+
+
+```{r, warning=FALSE, message=FALSE}
+gdp_df <- read.csv("data/SAGDP1__ALL_AREAS_1997_2024.csv")
+
+gdp_real <- gdp_df %>%
+  filter(Description == "Real GDP (millions of chained 2017 dollars) 1/")
+
+state_codes <- read.csv("https://raw.githubusercontent.com/jasonong/List-of-US-States/master/states.csv")
+
+gdp_df2 <- gdp_real %>%
+  select(GeoName, X2017, X2019, X2020, X2022) %>%
+  rename(state = GeoName) %>%
+  mutate(
+    gdp_pre = ((X2019 - X2017) / X2017) * 100,
+    gdp_post = ((X2022 - X2020) / X2020) * 100
+  ) %>%
+  filter(state != "United States")
+
+gdp_final <- gdp_df2 %>%
+  left_join(state_codes, by = c("state" = "State")) %>%
+  select(Abbreviation, gdp_pre, gdp_post) %>%
+  rename(State = Abbreviation)
+
+head(gdp_final)
+```
+
+```{r}
+# export to file but I will # because we already have sync folder with github
+#write.csv(gdp_final, "data/data-clean/GDP.csv", row.names = FALSE)
+```
+
+### File 3
+***Personal Consumption Expenditures (PCE)***
+
+Personal Consumption Expenditures (PCE) by State: https://apps.bea.gov/regional/downloadzip.htm
+
+File name: SAPCE1__ALL_AREAS_1997_2023.csv
+
+```{r, warning=FALSE, message=FALSE}
+pce <- read.csv("data/SAPCE1__ALL_AREAS_1997_2023.csv")
+
+pce_df <- pce %>%
+  filter(Description == "Personal consumption expenditures ") %>%
+  select(GeoName, X2017, X2019, X2020, X2022) %>%
+  rename(state = GeoName) %>%
+  filter(state != "United States") %>%
+  mutate(
+    pce_pre = ((X2019 - X2017) / X2017) * 100,
+    pce_post = ((X2022 - X2020) / X2020) * 100
+  )
+
+pce_final <- pce_df %>%
+  left_join(state_codes, by = c("state" = "State")) %>%
+  select(Abbreviation, pce_pre, pce_post) %>%
+  rename(State = Abbreviation)
+
+head(pce_final)
+```
+
+```{r}
+# export to file but I will # because we already have sync folder with github
+#write.csv(pce_final, "data/data-clean/PCE.csv", row.names = FALSE)
+```
+
+### File4
+**Annual Personal Income**
+
+Annual Personal Income by State: https://apps.bea.gov/regional/downloadzip.htm
+File name: SAINC1__ALL_AREAS_1929_2024.csv
+
+```{r, warning=FALSE, message=FALSE}
+income <- read.csv("data/SAINC1__ALL_AREAS_1929_2024.csv")
+
+income_df1 <- income %>%
+  filter(str_trim(Description) == "Per capita personal income (dollars) 2/") %>%
+  select(GeoName, X2017, X2019, X2020, X2022) %>%
+  rename(state = GeoName) %>%
+  filter(state != "United States") %>%
+  mutate(
+    income_pre = ((X2019 - X2017) / X2017) * 100,
+    income_post = ((X2022 - X2020) / X2020) * 100
+  )
+
+income_final <- income_df1 %>%
+  left_join(state_codes, by = c("state" = "State")) %>%
+  select(Abbreviation, income_pre, income_post) %>%
+  rename(State = Abbreviation)
+
+head(income_final)
+```
+
+```{r}
+# export to file but I will # because we already have sync folder with github
+#write.csv(income_final, "data/data-clean/INCOME.csv", row.names = FALSE)
+```
+
+### File5
+
+Unemployment rate by state
+
+```{r, warning=FALSE, message=FALSE}
+unemploy <- read_excel("data/unemployment rate.xlsx", range = "A1:DR53")
+names(unemploy)[-1] <- as.character(as.Date(as.numeric(names(unemploy)[-1]), origin = "1899-12-30"))
+
+pre_df <- unemploy %>%
+  select(State, `2017-12-01`, `2019-12-01`) %>%
+  # Some is chr so we need to numeric
+  mutate(across(-State, ~ as.numeric(.))) %>%
+  mutate(unemp_pre = `2019-12-01` - `2017-12-01`) %>%
+  rename(unemp_19 = `2019-12-01`, unemp_17=`2017-12-01`) %>% 
+  select(State, unemp_pre, unemp_17 ,unemp_19)
+
+post_df <- unemploy %>%
+  select(State, `2020-12-01`, `2022-12-01`) %>%
+  # Some is chr so we need to numeric
+  mutate(across(-State, ~ as.numeric(.))) %>%
+  mutate(unemp_post = `2022-12-01` - `2020-12-01`) %>%
+  rename(unemp_22 = `2022-12-01`, unemp_20 = `2020-12-01`) %>% 
+  select(State, unemp_post, unemp_20, unemp_22)
+
+unemploy2 <- pre_df %>%
+  inner_join(post_df, by = "State")
+
+unemploy3 <- unemploy2 %>%
+  left_join(state_codes, by = c("State" = "State"))
+
+unemploy_final <- unemploy3 %>% 
+  select(Abbreviation, unemp_pre,unemp_17, unemp_19, unemp_post,unemp_20, unemp_22) %>% 
+  rename(State = Abbreviation)
+
+unemploy_final
+```
+```{r}
+# export to file but I will # because we already have sync folder with github
+#write.csv(unemploy_final, "data/data-clean/UNEMPLOY.csv", row.names = FALSE)
+```
+
+### File6
+
+Housing data: https://www.zillow.com/research/data/
+File name: State_zhvi_uc_sfrcondo_tier_0.33_0.67_sm_sa_month.csv
+
+```{r, warning=FALSE, message=FALSE}
+house <- read_csv("data/State_zhvi_uc_sfrcondo_tier_0.33_0.67_sm_sa_month.csv")
+
+house1 <- house %>%
+  rename(State = RegionName) %>%
+  select(-StateName, -RegionID, -SizeRank, -RegionType)
+```
+
+```{r, warning=FALSE, message=FALSE}
+house_long <- house1 %>%
+  pivot_longer(cols = -State, names_to = "Date", values_to = "ZHVI")
+#house_long
+
+house_long1 <- house_long %>%
+  filter(str_sub(Date, 1, 4) %in% c("2017", "2018", "2019", "2020", "2021", "2022"))
+
+#house_long1
+
+house_long2 <- house_long1 %>%
+  mutate(year = as.numeric(str_sub(Date, 1, 4)))
+
+house_avg <- house_long2 %>%
+  group_by(State, year) %>%
+  summarise(mean_zhvi = mean(ZHVI, na.rm = TRUE), .groups = "drop")
+
+#house_avg
+
+house2 <- house_avg %>%
+  pivot_wider(names_from = year, values_from = mean_zhvi)
+
+house2
+```
+
+```{r, warning=FALSE, message=FALSE}
+house3 <- house2 %>%
+  mutate(
+    zhvi_pre_avg = rowMeans(select(., `2017`, `2018`, `2019`), na.rm = TRUE),
+    zhvi_post_avg = rowMeans(select(., `2020`, `2021`, `2022`), na.rm = TRUE),
+    zhvi_pre_change = ((`2019` - `2017`) / `2017`)*100,
+    zhvi_post_change = ((`2022` - `2020`) / `2020`)*100
+  ) %>%
+  select(State, zhvi_pre_avg, zhvi_post_avg, zhvi_pre_change, zhvi_post_change)
+
+#house3
+
+house4 <- house3 %>%
+  left_join(state_codes, by = c("State" = "State"))
+
+house_final <- house4  %>%
+  select(Abbreviation, zhvi_pre_avg, zhvi_post_avg, zhvi_pre_change, zhvi_post_change) %>%
+  rename(State = Abbreviation)
+
+house_final 
+```
+
+```{r}
+# export to file but I will # because we already have sync folder with github
+#write.csv(house_final, "data/data-clean/HOUSING.csv", row.names = FALSE)
+```
