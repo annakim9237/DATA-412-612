@@ -90,3 +90,69 @@ ggplot(top10, aes(x = state, y = total_post)) +
   scale_y_continuous(labels = scales::dollar_format())
 ```
 
+
+
+
+### Covid visuals
+```{r}
+ggplot(covidstates, aes(x=State, y= total_cases, color=year)) +
+  geom_point()
+
+
+ggplot(covidstates, aes(x = severity, fill = severity)) +
+  geom_bar() +
+  labs(title = "Distribution of States by Case Severity",
+       x = "Severity",
+       y = "Number of States") +
+  scale_fill_manual(values = c("Low" = "green", "Medium" = "yellow", "High" = "red"))
+```
+
+
+
+```{r}
+library(maps)
+us_states <- map_data("state")
+
+covid_map_data <- us_states %>%
+  left_join(covidstates, by = c("region" = "State"))
+
+ggplot(covid_map_data, aes(x = long, y = lat, group = group, fill = severity)) +
+  geom_polygon(color = "black") +
+  coord_fixed(1.1) +
+  labs(title = "COVID Case Severity by State") +
+  scale_fill_manual(values = c("Low" = "green", "Medium" = "yellow", "High" = "red")) +
+  theme_void()
+```
+
+```{r}
+state_abbreviations <- data.frame(
+  abbreviation = state.abb, 
+  full_name = state.name  
+)
+
+covidstatesFULLNAME$State <- tolower(covidstatesFULLNAME$State) 
+us_states <- map_data("state")
+us_states$region <- tolower(us_states$region)
+
+# map visualization code
+us_states <- map_data("state")
+us_states$region <- tolower(us_states$region) 
+
+# Merge the map data with the COVID data
+covid_map_data <- us_states %>%
+  left_join(covidstatesFULLNAME, by = c("region" = "State"))
+
+# Plot the map
+ggplot(covid_map_data, aes(x = long, y = lat, group = group, fill = severity)) +
+  geom_polygon(color = "black") +
+  coord_fixed(1.1) +
+  labs(title = "COVID Case Severity by State",
+       fill = "Severity") +
+  scale_fill_manual(values = c("Low" = "yellow", "Medium" = "orange", "High" = "red")) +
+  theme_void() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+
+covidstatesFULLNAME
+covidstates
+```
+

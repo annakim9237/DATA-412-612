@@ -1,0 +1,101 @@
+---
+title: "COVID"
+author: "Nabiha Chowdhury"
+date: "2025-04-18"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+library(tidyverse)
+library(lubridate)
+```
+
+
+### Covid cases for all of US
+```{r}
+covid <- read_csv("~/Downloads/cases_deaths.csv")
+#View(covid)
+
+covid_US <- covid %>% 
+  filter(country == "United States") %>% 
+  select(country, date, new_cases, total_cases, weekly_cases) %>%
+  mutate(date = as.Date(date)) %>%
+  mutate(year = year(date), month = month(date, label = TRUE, abbr = FALSE)) %>%
+  group_by(year, month) %>%
+  summarise(
+    monthly_new_cases = sum(new_cases, na.rm = TRUE),
+    latest_total_cases = max(total_cases, na.rm = TRUE),
+    total_weekly_cases = sum(weekly_cases, na.rm = TRUE),
+    .groups = "drop"
+  )
+
+covid_US
+
+```
+ 
+ 
+### Covid cases per state per year
+```{r}
+covidbystate <- read_csv("~/Downloads/covid_confirmed_usafacts.csv")
+
+covidStatesDaily <- covidbystate %>% 
+  group_by(State) %>% 
+  summarise(across(where(is.numeric), sum, na.rm = TRUE))
+#covidStatesDaily
+
+covid_states <- covidStatesDaily %>% 
+  pivot_longer(
+    cols = -State,
+    names_to = "date",
+    values_to = "cases"
+  ) %>%
+  filter(str_detect(date, "^\\d{4}-\\d{2}-\\d{2}$")) %>%
+  mutate(
+    date = ymd(date),
+    year = year(date)
+  ) %>%
+  group_by(State, year) %>%
+  summarise(total_cases = max(cases, na.rm = TRUE), .groups = "drop")
+
+covidstates
+```
+ 
+### Covid with low, medium, high
+```{r}
+case_summary <- summary(covidstates$total_cases)
+case_summary
+
+covidstates <- covidstates %>% 
+  mutate(
+    severity = case_when(
+      total_cases <= case_summary[2] ~ "Low",     # Q1 (25%)
+      total_cases <= case_summary[5] ~ "Medium",  # Q3 (75%)
+      TRUE ~ "High"                               # Above Q3
+    )
+  )
+
+covidstates
+```
+
+
+
+```{r}
+case_summary <- summary(covidstates$total_cases)
+case_summary
+
+covidstates2 <- covidstates %>% 
+  mutate(
+    severity = case_when(
+      total_cases <= 300000 ~ "Low",     # Q1 (25%)
+      total_cases <= 700000 ~ "Medium",  # Q3 (75%)
+      TRUE ~ "High"                               # Above Q3
+    )
+  )
+
+covidstates2
+```
+```
+
+
