@@ -56,6 +56,7 @@ target_sheets <- c(
 "studentloan_delinq"
 )
 
+# auto has different format so seperated
 auto <- read_excel(file_path, sheet = "auto", skip = 4, col_names = TRUE)
 #auto
 for (sheet_name in target_sheets) {

@@ -1,0 +1,278 @@
+---
+title: "Visual"
+output: html_document
+---
+
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r, warning=FALSE, message=FALSE}
+library(readxl)
+library(dplyr)
+library(tidyr)
+library(stringr)
+library(readr)
+library(ggplot2)
+library(gridExtra)
+library(tibble)
+```
+
+
+```{r, warning=FALSE, message=FALSE}
+df<- read_csv("data/data-clean/FINAL.csv")
+
+df
+```
+
+## Compare by state
+
+```{r, warning=FALSE, message=FALSE}
+# compare GDP
+df %>% 
+  select(State, gdp_pre, gdp_post) %>% 
+  ggplot()+
+  geom_bar(mapping = aes(x=reorder(State, -gdp_post), y=gdp_pre
+                         , fill = "GDP pre = ((X2019 - X2017) / X2017) * 100")
+           , stat = "identity"
+           , position = position_nudge(x = -0.3)
+           , width = 0.4)+
+  geom_bar(mapping = aes(x=reorder(State, -gdp_post), y=gdp_post, fill ="GDP post = ((X2022 - X2020) / X2020) * 100")
+           , stat = "identity"
+           , position = position_nudge(x = 0.3)
+           , width = 0.4)+
+  labs(title = "Real GDP Growth: Pre vs Post COVID", y = "GDP Change (%)", x = "")+
+  theme(axis.text.x = element_text(angle = 90, hjust = 1), legend.position = "bottom")
+  
+```
+
+```{r, warning=FALSE, message=FALSE}
+df %>%
+  select(State, income_pre, income_post) %>%
+  ggplot() +
+  geom_bar(mapping = aes(x = reorder(State, -income_post)
+                         , y = income_pre
+                         , fill = "Income pre = ((X2019 - X2017) / X2017) * 100")
+           , stat = "identity"
+           , position = position_nudge(x = -0.3)
+           , width = 0.4) +
+  geom_bar(mapping = aes(x = reorder(State, -income_post)
+                         , y = income_post
+                         , fill = "Income post = ((X2022 - X2020) / X2020) * 100")
+           ,stat = "identity"
+           , position = position_nudge(x = 0.3)
+           , width = 0.4) +
+  labs(title = "Personal Income Growth: Pre vs Post COVID", y = "Income Change (%)", x = "") +
+  theme(axis.text.x = element_text(angle = 90, hjust = 1), legend.position = "bottom")
+```
+
+```{r, warning=FALSE, message=FALSE}
+df %>%
+  select(State, pce_pre, pce_post) %>%
+  ggplot() +
+  geom_bar(mapping = aes(x = reorder(State, -pce_post)
+                         , y = pce_pre
+                         , fill = "PCE pre = ((X2019 - X2017) / X2017) * 100")
+           , stat = "identity"
+           , position = position_nudge(x = -0.3)
+           , width = 0.4) +
+  geom_bar(mapping = aes(x = reorder(State, -pce_post)
+                         , y = pce_post
+                         , fill = "PCE post = ((X2022 - X2020) / X2020) * 100")
+           , stat = "identity"
+           , position = position_nudge(x = 0.3)
+           , width = 0.4) +
+  labs(title = "Personal Consumption Expenditures Growth: Pre vs Post COVID",
+       y = "PCE Change (%)", x = "") +
+  theme(axis.text.x = element_text(angle = 90, hjust = 1), legend.position = "bottom")
+```
+
+
+```{r, warning=FALSE, message=FALSE}
+
+df %>%
+  select(State, unemp_pre, unemp_post) %>%
+  ggplot() +
+  geom_bar(aes(x = reorder(State, -unemp_post)
+               , y = unemp_pre, 
+               fill = "Unemp pre = 2019 - 2017")
+           , stat = "identity"
+           , position = position_nudge(x = -0.3)
+           , width = 0.4) +
+  geom_bar(aes(x = reorder(State, -unemp_post)
+               , y = unemp_post
+               , fill = "Unemp post = (2022 - 2020)")
+           , stat = "identity"
+           , position = position_nudge(x = 0.3)
+           , width = 0.4) +
+  labs(title = "Unemployment Rate Change: 2017–2019 vs 2020–2022", y = "Change in Unemployment Rate", x = "") +
+  theme(axis.text.x = element_text(angle = 90, hjust = 1),legend.position = "bottom")
+
+```
+
+
+```{r, warning=FALSE, message=FALSE}
+
+df_emp <- df %>%
+  select(State, unemp_17, unemp_19, unemp_20, unemp_22)
+
+#df_emp
+
+df_long <- df_emp %>% 
+  pivot_longer(cols = starts_with("unemp_"), names_to = "Year", values_to = "Unemployment") %>%
+  mutate(Year = recode(Year,
+                       "unemp_17" = "2017",
+                       "unemp_19" = "2019",
+                       "unemp_20" = "2020",
+                       "unemp_22" = "2022"))
+
+#df_long 
+
+ggplot(df_long, aes(x = Year, y = Unemployment, group = State, color = State)) +
+  geom_line(size = 1) +
+  labs(title = "Unemployment Rate by State", y = "Unemployment Rate (%)", x = "Year") +
+  theme(legend.position = "none")
+```
+
+| Variable Name             | Formula or Definition                           | Description                     |
+|---------------------------|-------------------------------------------------|---------------------------------|
+| creditcard_pre          | ((Q4_2019 - Q4_2017) / Q4_2017) × 100                | Credit card debt growth rate (Pre-COVID) |
+| creditcard_post         | ((Q4_2022 - Q4_2020) / Q4_2020) × 100                | Credit card debt growth rate (Post-COVID) |
+| creditcard_delinq_pre   | Q4_2019                                              | Credit card delinquency rate (Pre-COVID) |
+| creditcard_delinq_post  | Q4_2022                                              | Credit card delinquency rate (Post-COVID) |
+
+```{r, warning=FALSE, message=FALSE}
+credit_df <- df %>% 
+  select(State, creditcard_pre, creditcard_post) %>% 
+  pivot_longer(cols = c(creditcard_pre, creditcard_post),
+               names_to = "Time", values_to = "Change") %>% 
+  mutate(Time = factor(Time, levels = c("creditcard_pre", "creditcard_post")))
+
+credit_df
+
+ggplot(credit_df, aes(x = State, y = Change, fill = Time)) +
+  geom_bar(stat = "identity", position = position_dodge(width = 0.7), width = 0.9) +  
+  labs(title = "Change Rate in Credit Card Dept",
+       y = "Credit Card Dept Change Rate (%)", x = "")+
+  theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust = 1),
+        legend.position = "bottom")
+```
+```{r, warning=FALSE, message=FALSE, fig.width=10, fig.height=10}
+credit_delinq_df <- df %>% 
+  select(State, creditcard_delinq_pre, creditcard_delinq_post) %>% 
+  pivot_longer(cols = c(creditcard_delinq_pre, creditcard_delinq_post),
+               names_to = "Time", values_to = "Change") %>% 
+  mutate(Time = factor(Time, levels = c("creditcard_delinq_pre", "creditcard_delinq_post")))
+
+#credit_delinq_df
+
+gg_debt <- ggplot(credit_df, aes(x = Time, y = Change, fill = Time)) +
+  geom_violin(trim = FALSE, alpha = 0.5) +
+  labs(title = "Credit Card Debt Change (%)", y = "Change Rate (%)", x = "")+
+  theme(legend.position = "bottom")
+
+#gg_debt 
+
+gg_delinq <- ggplot(credit_delinq_df, aes(x = Time, y = Change, fill = Time)) +
+  geom_violin(trim = FALSE, alpha = 0.5) +
+  labs(title = "Credit Card Delinquency Rate (%)", y = "Delinquency Rate (%)", x = "")+
+  theme(legend.position = "bottom")
+
+#gg_delinq
+
+grid.arrange(gg_debt, gg_delinq, ncol = 2)
+```
+
+
+```{r, warning=FALSE, message=FALSE, fig.width=12, fig.height=12}
+
+#Percent Change in Mortgage Debt Balance per Capita (2017 → 2019)
+qq1 <- ggplot(df, aes(x = "", y = mortgage_pre)) +
+  geom_boxplot(fill = "pink") +
+  labs(title = "Mortgage Debt per Capital -Pre", y = "Mortgage Dept Change Rate (%)")
+
+# Percent Change in Mortgage Debt Balance per Capita (2020 → 2022)
+qq2 <- ggplot(df, aes(x = "", y = mortgage_post)) +
+  geom_boxplot(fill = "skyblue") +
+  labs(title = "Mortgage Debt per Capital - Post", y = "Mortgage Dept Change Rate (%)")
+
+qq3 <- ggplot(df, aes(x = "", y = mortgage_delinq_pre)) +
+  geom_boxplot(fill = "orange") +
+  labs(title = "Mortgage Delinquency - Pre", y = "Delinquency Rate (%)")
+
+qq4 <- ggplot(df, aes(x = "", y = mortgage_delinq_post)) +
+  geom_boxplot(fill = "purple") +
+  labs(title = "Mortgage Delinquency - Post", y = "Delinquency Rate (%)")
+
+grid.arrange(qq1, qq2, qq3, qq4, ncol = 4)
+```
+
+```{r, warning=FALSE, message=FALSE}
+df %>%
+  select(State, studentloan_delinq_pre, studentloan_delinq_post) %>%
+  ggplot() +
+  geom_bar(aes(x = reorder(State, -studentloan_delinq_post)
+               , y = studentloan_delinq_pre
+               ,fill = "Student Loan pre = Q4_2019")
+           , stat = "identity"
+           , position = position_nudge(x = -0.3)
+           , width = 0.4) +
+  geom_bar(aes(x = reorder(State, -studentloan_delinq_post)
+               , y = studentloan_delinq_post
+               , fill = "Student Loan post = Q4_2022")
+           , stat = "identity"
+           , position = position_nudge(x = 0.3)
+           , width = 0.4) +
+  labs(title = "Student Loan Delinquency: Pre vs Post COVID", y = "Delinquency Rate (%)", x = "") +
+  theme(axis.text.x = element_text(angle = 90, hjust = 1),legend.position = "bottom")
+
+```
+
+```{r, warning=FALSE, message=FALSE}
+
+student_df <- df %>% 
+  select(State, studentloan_pre, studentloan_post) %>% 
+  pivot_longer(cols = c(studentloan_pre, studentloan_post), names_to = "Time", values_to = "Change") %>%
+  mutate(Time= ifelse(Time == "studentloan_pre", "Pre", "Post"))
+
+#student_df
+
+student_df$Time <- factor(student_df$Time, levels = c("Pre", "Post"))
+
+gg_student <- ggplot(student_df, aes(x = Time, y = Change, fill = Time)) +
+  geom_violin(trim = FALSE, alpha = 0.4) +
+  labs(title = "Student Loan Debt Change (%)", y = "Change Rate (%)", x = "") +
+  scale_fill_manual(values = c( "Pre" = "orange","Post" = "purple"))
+
+#gg_student
+
+#names(df)
+
+student_df2 <- df %>% 
+  select(State, studentloan_delinq_pre, studentloan_delinq_post) %>% 
+  pivot_longer(cols = c(studentloan_delinq_pre, studentloan_delinq_post), names_to = "Time", values_to = "Change") %>%
+  mutate(Time= ifelse(Time == "studentloan_delinq_pre", "Pre", "Post"))
+
+#student_df2
+
+student_df2$Time <- factor(student_df2$Time, levels = c("Pre", "Post"))
+
+gg_student2 <- ggplot(student_df2, aes(x = Time, y = Change, fill = Time)) +
+  geom_violin(trim = FALSE, alpha = 0.4) +
+  labs(title = "Student Loan Debt Deliq Change (%)", y = "Change Rate (%)", x = "") +
+  scale_fill_manual(values = c( "Pre" = "yellow", "Post" = "red"))
+
+#gg_student2
+
+grid.arrange(gg_student, gg_student2, ncol = 2)
+```
+
+
+
+
+```{r, warning=FALSE, message=FALSE}
+```
+
+```{r, warning=FALSE, message=FALSE}
+```
