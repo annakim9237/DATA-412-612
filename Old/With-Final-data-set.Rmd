@@ -20,12 +20,12 @@ library(readr)
 # Final Data Join
 
 ```{r, warning=FALSE, message=FALSE}
-clean_gdp <- read_csv("data/data-clean/GDP.csv")
-clean_income <- read_csv("data/data-clean/INCOME.csv")
-clean_nyfed <- read_csv("data/data-clean/NYFED.csv")
-clean_pce <- read_csv("data/data-clean/PCE.csv")
-clean_unemploy <- read_csv("data/data-clean/UNEMPLOY.csv")
-clean_housing<- read_csv("data/data-clean/HOUSING.csv")
+clean_gdp <- read_csv("new-data/data-clean/GDP.csv")
+clean_income <- read_csv("new-data/data-clean/INCOME.csv")
+clean_nyfed <- read_csv("new-data/data-clean/NYFED.csv")
+clean_pce <- read_csv("new-data/data-clean/PCE.csv")
+clean_unemploy <- read_csv("new-data/data-clean/UNEMPLOY.csv")
+clean_housing<- read_csv("new-data/data-clean/HOUSING.csv")
 
 #clean_gdp 
 #clean_income
@@ -66,7 +66,7 @@ merged_df
 ```
 ```{r}
 # export to file but I will # because we already have sync folder with github
-# write.csv(merged_df, "data/data-clean/FINAL.csv", row.names = FALSE)
+# write.csv(merged_df, "new-data/data-clean/FINAL.csv", row.names = FALSE)
 ```
 
 

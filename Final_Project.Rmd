@@ -1,0 +1,110 @@
+---
+title: "Final_Project"
+author: "Nabiha Chowdhury & Anna Hyunjung Kim"
+date: "`r Sys.Date()`"
+output: 
+  html_document:
+        toc: true
+        toc_float: true
+        number_sections: true
+        code_folding: hide
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r, message=FALSE, warning=FALSE}
+library(readxl)
+library(dplyr)
+library(tidyr)
+library(stringr)
+
+library(tidyverse)
+library(DT)
+library(patchwork)
+library(ggthemes)
+library(plotly)
+library(gapminder)
+library(grid)
+library(ggplot2)
+library(gridExtra)
+```
+
+# Title {#Top}
+
+Exploring the Impact of COVID-19 on State-Level Economic Indicators and housing price in the U.S
+
+## Introduction
+
+This project is to explore how the COVID-19 affected economic conditions especially housing price across U.S. states. Although the final goal is to analyze which factors contributed to post-COVID changes in housing prices, it also contains essential works: collecting, cleaning, visualizing and statistical analysis.
+
+## Data Soueces
+
+***- COVID***
+
+***- Zillow Home Value Index (ZHVI)***
+
+A measure of the typical home value and market changes across a given region and housing type. It reflects the typical value for homes in the 35th to 65th percentile range. Available as a smoothed, seasonally adjusted measure and as a raw measure.
+
+Source: Zillow Research (https://www.zillow.com/research/data/)
+
+File name: State_zhvi_uc_sfrcondo_tier_0.33_0.67_sm_sa_month.csv
+
+***- State unemployment rates over the last 10 years, seasonally adjusted***
+
+This dataset shows monthly unemployment rates by U.S. state. It is part of the Local Area Unemployment Statistics (LAUS) program by the Bureau of Labor Statistics (BLS). The data is seasonally adjusted and helps track labor market trends at the state level over time.
+
+Source :U.S. Bureau of Labor Statistics (https://www.bls.gov/charts/state-employment-and-unemployment/state-unemployment-rates-animated.htm)
+
+File name: unemployment rate.xlxs
+
+***- Personal Consumption Expenditures (PCE)***
+
+Reports annual state-level PCE data, measuring average household spending across different regions.
+
+Source: Bureau of Economic Analysis (BEA) (https://apps.bea.gov/regional/downloadzip.htm)
+
+File name: SAPCE1__ALL_AREAS_1997_2023.csv 
+
+***- Annual Personal Income ***
+
+Includes annual personal income per capita by state. Useful for assessing economic status and regional income disparities.
+Source: Bureau of Economic Analysis (BEA)
+File name: SAINC1__ALL_AREAS_1929_2024.csv → INCOME.csv
+
+***- Gross Domestic Product (GDP) ***
+
+Provides real GDP data by state from 1997 to 2024. This helps analyze economic output and growth across regions.
+
+Source: Bureau of Economic Analysis (BEA)
+
+File name: SAGDP1__ALL_AREAS_1997_2024.csv
+
+***- State Level Household Debt Statistics ***
+
+Includes per capita credit card debt and total household debt across states. Used to assess consumer financial health.
+
+| Sheet                    | Title                                                           |
+|--------------------------|-----------------------------------------------------------------|
+| population               | Number of Consumers in New York Fed Consumer Credit Panel       |
+| auto loan                | Auto Debt Balance per Capita                                    |
+| credit card              | Credit Card Debt Balance per Capita                             |
+| mortgage                 | Mortgage Debt Balance per Capita (excluding HELOC)              |
+| student loan             | Student Loan Debt Balance per Capita                            |
+| total                    | Total Debt Balance per Capita                                   |
+| auto loan delinquency    | Percent of Auto Debt Balance 90+ Days Delinquent                |
+| credit card delinquency  | Percent of Credit Card Debt Balance 90+ Days Delinquent         |
+| mortgage delinquency     | Percent of Mortgage Debt Balance 90+ Days Delinquent            |
+| student loan delinquency | Percent of Student Loan Debt Balance 90+ Days Delinquent (and in default) |
+
+
+Source: New York Fed (https://www.newyorkfed.org/microeconomics/databank.html)
+File name: area_report_by_year.xlsx → NYFED.csv
+
+# DATA CLEANING
+
+# DEMO
+
+
+
