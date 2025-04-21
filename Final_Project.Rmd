@@ -33,7 +33,7 @@ library(gridExtra)
 
 # Title {#Top}
 
-Exploring the Impact of COVID-19 on State-Level Economic Indicators and housing price in the U.S
+**Exploring the Impact of COVID-19 on State-Level Economic Indicators and housing price in the U.S**
 
 ## Introduction
 
@@ -41,9 +41,9 @@ This project is to explore how the COVID-19 affected economic conditions especia
 
 ## Data Soueces
 
-***- COVID***
+- ***COVID***
 
-***- Zillow Home Value Index (ZHVI)***
+- ***Zillow Home Value Index (ZHVI)***
 
 A measure of the typical home value and market changes across a given region and housing type. It reflects the typical value for homes in the 35th to 65th percentile range. Available as a smoothed, seasonally adjusted measure and as a raw measure.
 
@@ -51,7 +51,7 @@ Source: Zillow Research (https://www.zillow.com/research/data/)
 
 File name: State_zhvi_uc_sfrcondo_tier_0.33_0.67_sm_sa_month.csv
 
-***- State unemployment rates over the last 10 years, seasonally adjusted***
+- ***State unemployment rates over the last 10 years, seasonally adjusted***
 
 This dataset shows monthly unemployment rates by U.S. state. It is part of the Local Area Unemployment Statistics (LAUS) program by the Bureau of Labor Statistics (BLS). The data is seasonally adjusted and helps track labor market trends at the state level over time.
 
@@ -59,7 +59,7 @@ Source :U.S. Bureau of Labor Statistics (https://www.bls.gov/charts/state-employ
 
 File name: unemployment rate.xlxs
 
-***- Personal Consumption Expenditures (PCE)***
+- ***Personal Consumption Expenditures (PCE)***
 
 Reports annual state-level PCE data, measuring average household spending across different regions.
 
@@ -67,13 +67,13 @@ Source: Bureau of Economic Analysis (BEA) (https://apps.bea.gov/regional/downloa
 
 File name: SAPCE1__ALL_AREAS_1997_2023.csv 
 
-***- Annual Personal Income ***
+- ***Annual Personal Income ***
 
 Includes annual personal income per capita by state. Useful for assessing economic status and regional income disparities.
 Source: Bureau of Economic Analysis (BEA)
 File name: SAINC1__ALL_AREAS_1929_2024.csv → INCOME.csv
 
-***- Gross Domestic Product (GDP) ***
+- ***Gross Domestic Product (GDP) ***
 
 Provides real GDP data by state from 1997 to 2024. This helps analyze economic output and growth across regions.
 
@@ -81,7 +81,7 @@ Source: Bureau of Economic Analysis (BEA)
 
 File name: SAGDP1__ALL_AREAS_1997_2024.csv
 
-***- State Level Household Debt Statistics ***
+- ***State Level population and Household Debt Statistics ***
 
 Includes per capita credit card debt and total household debt across states. Used to assess consumer financial health.
 
@@ -102,9 +102,741 @@ Includes per capita credit card debt and total household debt across states. Use
 Source: New York Fed (https://www.newyorkfed.org/microeconomics/databank.html)
 File name: area_report_by_year.xlsx → NYFED.csv
 
-# DATA CLEANING
+# DATA CLEANING {.tabset}
 
-# DEMO
+## COVID DATA
+
+### Covid cases for all of US
+```{r, warning=FALSE, message=FALSE}
+##
+
+```
+
+## ZHVI
+
+```{r, warning=FALSE, message=FALSE}
+house <- read_csv("data/State_zhvi_uc_sfrcondo_tier_0.33_0.67_sm_sa_month.csv")
+
+house1 <- house %>%
+  rename(State = RegionName) %>%
+  select(-StateName, -RegionID, -SizeRank, -RegionType)
+```
+
+```{r, warning=FALSE, message=FALSE}
+house_long <- house1 %>%
+  pivot_longer(cols = -State, names_to = "Date", values_to = "ZHVI")
+#house_long
+
+house_long1 <- house_long %>%
+  filter(str_sub(Date, 1, 4) %in% c("2017", "2018", "2019", "2020", "2021", "2022"))
+
+#house_long1
+
+house_long2 <- house_long1 %>%
+  mutate(year = as.numeric(str_sub(Date, 1, 4)))
+
+house_avg <- house_long2 %>%
+  group_by(State, year) %>%
+  summarise(mean_zhvi = mean(ZHVI, na.rm = TRUE), .groups = "drop")
+
+#house_avg
+
+house2 <- house_avg %>%
+  pivot_wider(names_from = year, values_from = mean_zhvi)
+
+house2
+```
+
+```{r, warning=FALSE, message=FALSE}
+
+house3 <- house2 %>%
+  mutate(
+    zhvi_pre_avg = rowMeans(select(., `2017`, `2018`, `2019`), na.rm = TRUE),
+    zhvi_post_avg = rowMeans(select(., `2020`, `2021`, `2022`), na.rm = TRUE),
+    zhvi_pre_change = ((`2019` - `2017`) / `2017`)*100,
+    zhvi_post_change = ((`2022` - `2020`) / `2020`)*100
+  ) %>%
+  select(State, zhvi_pre_avg, zhvi_post_avg, zhvi_pre_change, zhvi_post_change)
+
+#house3
+state_codes <- read.csv("https://raw.githubusercontent.com/jasonong/List-of-US-States/master/states.csv")
+
+house4 <- house3 %>%
+  left_join(state_codes, by = c("State" = "State"))
+
+house_final <- house4  %>%
+  select(Abbreviation, zhvi_pre_avg, zhvi_post_avg, zhvi_pre_change, zhvi_post_change) %>%
+  rename(State = Abbreviation)
+
+house_final 
+```
+
+```{r}
+# export to file but I will # because we already have sync folder with github
+#write.csv(house_final, "data/data-clean/HOUSING.csv", row.names = FALSE)
+```
+
+## Unemployment Rates
+
+```{r, warning=FALSE, message=FALSE}
+unemploy <- read_excel("data/unemployment rate.xlsx", range = "A1:DR53")
+names(unemploy)[-1] <- as.character(as.Date(as.numeric(names(unemploy)[-1]), origin = "1899-12-30"))
+
+pre_df <- unemploy %>%
+  select(State, `2017-12-01`, `2019-12-01`) %>%
+  # Some is chr so we need to numeric
+  mutate(across(-State, ~ as.numeric(.))) %>%
+  mutate(unemp_pre = `2019-12-01` - `2017-12-01`) %>%
+  rename(unemp_19 = `2019-12-01`, unemp_17=`2017-12-01`) %>% 
+  select(State, unemp_pre, unemp_17 ,unemp_19)
+
+post_df <- unemploy %>%
+  select(State, `2020-12-01`, `2022-12-01`) %>%
+  # Some is chr so we need to numeric
+  mutate(across(-State, ~ as.numeric(.))) %>%
+  mutate(unemp_post = `2022-12-01` - `2020-12-01`) %>%
+  rename(unemp_22 = `2022-12-01`, unemp_20 = `2020-12-01`) %>% 
+  select(State, unemp_post, unemp_20, unemp_22)
+
+unemploy2 <- pre_df %>%
+  inner_join(post_df, by = "State")
+
+unemploy3 <- unemploy2 %>%
+  left_join(state_codes, by = c("State" = "State"))
+
+unemploy_final <- unemploy3 %>% 
+  select(Abbreviation, unemp_pre,unemp_17, unemp_19, unemp_post,unemp_20, unemp_22) %>% 
+  rename(State = Abbreviation)
+
+unemploy_final
+```
+```{r}
+# export to file but I will # because we already have sync folder with github
+#write.csv(unemploy_final, "data/data-clean/UNEMPLOY.csv", row.names = FALSE)
+```
+
+
+## PCE
+
+```{r, warning=FALSE, message=FALSE}
+pce <- read.csv("data/SAPCE1__ALL_AREAS_1997_2023.csv")
+
+pce_df <- pce %>%
+  filter(Description == "Personal consumption expenditures ") %>%
+  select(GeoName, X2017, X2019, X2020, X2022) %>%
+  rename(state = GeoName) %>%
+  filter(state != "United States") %>%
+  mutate(
+    pce_pre = ((X2019 - X2017) / X2017) * 100,
+    pce_post = ((X2022 - X2020) / X2020) * 100
+  )
+
+pce_final <- pce_df %>%
+  left_join(state_codes, by = c("state" = "State")) %>%
+  select(Abbreviation, pce_pre, pce_post) %>%
+  rename(State = Abbreviation)
+
+head(pce_final)
+```
+
+```{r}
+# export to file but I will # because we already have sync folder with github
+#write.csv(pce_final, "data/data-clean/PCE.csv", row.names = FALSE)
+```
+
+
+## Annual Personal Income 
+
+```{r, warning=FALSE, message=FALSE}
+income <- read.csv("data/SAINC1__ALL_AREAS_1929_2024.csv")
+
+income_df1 <- income %>%
+  filter(str_trim(Description) == "Per capita personal income (dollars) 2/") %>%
+  select(GeoName, X2017, X2019, X2020, X2022) %>%
+  rename(state = GeoName) %>%
+  filter(state != "United States") %>%
+  mutate(
+    income_pre = ((X2019 - X2017) / X2017) * 100,
+    income_post = ((X2022 - X2020) / X2020) * 100
+  )
+
+income_final <- income_df1 %>%
+  left_join(state_codes, by = c("state" = "State")) %>%
+  select(Abbreviation, income_pre, income_post) %>%
+  rename(State = Abbreviation)
+
+head(income_final)
+```
+
+```{r}
+# export to file but I will # because we already have sync folder with github
+#write.csv(income_final, "data/data-clean/INCOME.csv", row.names = FALSE)
+```
+
+
+## GDP
+
+```{r, warning=FALSE, message=FALSE}
+gdp_df <- read.csv("data/SAGDP1__ALL_AREAS_1997_2024.csv")
+
+gdp_real <- gdp_df %>%
+  filter(Description == "Real GDP (millions of chained 2017 dollars) 1/")
+
+gdp_df2 <- gdp_real %>%
+  select(GeoName, X2017, X2019, X2020, X2022) %>%
+  rename(state = GeoName) %>%
+  mutate(
+    gdp_pre = ((X2019 - X2017) / X2017) * 100,
+    gdp_post = ((X2022 - X2020) / X2020) * 100
+  ) %>%
+  filter(state != "United States")
+
+gdp_final <- gdp_df2 %>%
+  left_join(state_codes, by = c("state" = "State")) %>%
+  select(Abbreviation, gdp_pre, gdp_post) %>%
+  rename(State = Abbreviation)
+
+head(gdp_final)
+```
+
+```{r}
+# export to file but I will # because we already have sync folder with github
+#write.csv(gdp_final, "data/data-clean/GDP.csv", row.names = FALSE)
+```
+
+## Population & Debt Statistics
+
+```{r, warning=FALSE, message=FALSE}
+file_path <- "data/area_report_by_year.xlsx"
+
+# There are many sheets so we should target it
+# But auto has diffefent format so we will seperate it
+target_sheets <- c(
+"population",
+"creditcard",
+"mortgage",
+"student loan",
+"total",
+"auto_delinq",
+"creditcard_delinq",
+"mortgage_delinq",
+"studentloan_delinq"
+)
+
+# auto has different format so seperated
+auto <- read_excel(file_path, sheet = "auto", skip = 4, col_names = TRUE)
+#auto
+for (sheet_name in target_sheets) {
+  
+  df_name <- gsub(" ", "_", sheet_name)
+  
+  # The real data start from 9 row in the xlxs file. 
+  df <- read_excel(file_path, sheet = sheet_name, skip = 8, col_names = TRUE)
+  
+  assign(df_name, df)
+  #print(df_name)
+}
+
+# After load the file, it's nice to check but I will make it # to make the document short.
+#population
+#auto
+#creditcard
+#mortgage
+#student_loan
+#total
+#auto_delinq
+#creditcard_delinq
+#mortgage_delinq
+#studentloan_delinq
+```
+
+```{r, warning=FALSE, message=FALSE}
+#population
+population_clean <- population %>%
+  filter(!is.na(state)) %>%
+  mutate(
+    population_pre = ((Q4_2019 - Q4_2017) / Q4_2017) * 100,
+    population_post = ((Q4_2022 - Q4_2020) / Q4_2020) * 100
+  ) %>%
+  select(state, population_pre, population_post)
+
+# population_clean
+```
+
+```{r, warning=FALSE, message=FALSE}
+creditcard_clean <- creditcard %>%
+  filter(!is.na(state)) %>%
+  mutate(
+    creditcard_pre = ((Q4_2019 - Q4_2017) / Q4_2017) * 100,
+    creditcard_post = ((Q4_2022 - Q4_2020) / Q4_2020) * 100
+  ) %>%
+  select(state, creditcard_pre, creditcard_post)
+
+# creditcard_clean
+```
+
+
+```{r, warning=FALSE, message=FALSE}
+auto_clean <- auto %>%
+  filter(!is.na(state)) %>%
+  mutate(
+    auto_pre = ((Q4_2019 - Q4_2017) / Q4_2017) * 100,
+    auto_post = ((Q4_2022 - Q4_2020) / Q4_2020) * 100
+  ) %>%
+  select(state, auto_pre, auto_post)
+
+# auto_clean
+```
+
+```{r, warning=FALSE, message=FALSE}
+mortgage_clean <- mortgage %>%
+  filter(!is.na(state)) %>%
+  mutate(
+    mortgage_pre = ((Q4_2019 - Q4_2017) / Q4_2017) * 100,
+    mortgage_post = ((Q4_2022 - Q4_2020) / Q4_2020) * 100
+  ) %>%
+  select(state, mortgage_pre, mortgage_post)
+
+# mortgage_clean
+```
+
+```{r, warning=FALSE, message=FALSE}
+studentloan_clean <- student_loan %>%
+  filter(!is.na(state)) %>%
+  mutate(
+    studentloan_pre = ((Q4_2019 - Q4_2017) / Q4_2017) * 100,
+    studentloan_post = ((Q4_2022 - Q4_2020) / Q4_2020) * 100
+  ) %>%
+  select(state, studentloan_pre, studentloan_post)
+
+# studentloan_clean
+```
+
+```{r, warning=FALSE, message=FALSE}
+total_clean <- total %>%
+  filter(!is.na(state)) %>%
+  mutate(
+    total_pre = ((Q4_2019 - Q4_2017) / Q4_2017) * 100,
+    total_post = ((Q4_2022 - Q4_2020) / Q4_2020) * 100
+  ) %>%
+  select(state, total_pre, total_post)
+
+# total_clean 
+```
+
+
+```{r, warning=FALSE, message=FALSE}
+creditcard_delinq_clean <- creditcard_delinq %>%
+  filter(!is.na(state)) %>%
+  select(state, Q4_2019, Q4_2022) %>%
+  rename(
+    creditcard_delinq_pre = Q4_2019,
+    creditcard_delinq_post = Q4_2022
+  )
+
+# creditcard_delinq_clean
+
+```
+
+```{r, warning=FALSE, message=FALSE}
+auto_delinq_clean <- auto_delinq %>%
+  filter(!is.na(state)) %>%
+  select(state, Q4_2019, Q4_2022) %>%
+  rename(
+    auto_delinq_pre = Q4_2019,
+    auto_delinq_post = Q4_2022
+  )
+
+# auto_delinq_clean
+```
+
+```{r, warning=FALSE, message=FALSE}
+mortgage_delinq_clean <- mortgage_delinq %>%
+  filter(!is.na(state)) %>%
+  select(state, Q4_2019, Q4_2022) %>%
+  rename(
+    mortgage_delinq_pre = Q4_2019,
+    mortgage_delinq_post = Q4_2022
+  )
+
+# mortgage_delinq_clean
+```
+
+```{r, warning=FALSE, message=FALSE}
+studentloan_delinq_clean <- studentloan_delinq %>%
+  filter(!is.na(state)) %>%
+  select(state, Q4_2019, Q4_2022) %>%
+  rename(
+    studentloan_delinq_pre = Q4_2019,
+    studentloan_delinq_post = Q4_2022
+  )
+
+# studentloan_delinq_clean
+```
+
+```{r, warning=FALSE, message=FALSE}
+NYFED_df <- population_clean %>%
+  left_join(creditcard_clean, by = "state") %>%
+  left_join(auto_clean, by = "state") %>%
+  left_join(mortgage_clean, by = "state") %>%
+  left_join(studentloan_clean, by = "state") %>%
+  left_join(total_clean, by = "state") %>%
+  left_join(creditcard_delinq_clean, by = "state") %>%
+  left_join(auto_delinq_clean, by = "state") %>%
+  left_join(mortgage_delinq_clean, by = "state") %>%
+  left_join(studentloan_delinq_clean, by = "state")
+
+head(NYFED_df)
+```
+```{r, warning=FALSE, message=FALSE}
+# Export final result if needed
+#write.csv(NYFED_df, "data/data-clean/NYFED.csv", row.names = FALSE)
+```
+
+## Final Data Join
+
+```{r, warning=FALSE, message=FALSE}
+clean_gdp <- read_csv("data/data-clean/GDP.csv")
+clean_income <- read_csv("data/data-clean/INCOME.csv")
+clean_nyfed <- read_csv("data/data-clean/NYFED.csv")
+clean_pce <- read_csv("data/data-clean/PCE.csv")
+clean_unemploy <- read_csv("data/data-clean/UNEMPLOY.csv")
+clean_housing<- read_csv("data/data-clean/HOUSING.csv")
+
+#clean_gdp 
+#clean_income
+#clean_nyfed 
+#clean_pce 
+#clean_unemploy 
+
+clean_nyfed  <- clean_nyfed  %>%
+  rename(State = state)
+
+# Find common states
+common_states <- Reduce(intersect, list(
+  clean_gdp$State,
+  clean_income$State,
+  clean_pce$State,
+  clean_nyfed$State,
+  clean_unemploy$State,
+  clean_housing$State
+))
+
+# Apply only common state
+clean_gdp <- clean_gdp %>% filter(State %in% common_states)
+clean_income <- clean_income %>% filter(State %in% common_states)
+clean_pce <- clean_pce %>% filter(State %in% common_states)
+clean_nyfed <- clean_nyfed %>% filter(State %in% common_states)
+clean_unemploy <- clean_unemploy %>% filter(State %in% common_states)
+clean_housing <- clean_housing %>% filter(State %in% common_states)
+
+# Merge to one data set
+merged_df <- clean_housing %>%
+  left_join(clean_gdp, by = "State") %>%
+  left_join(clean_income, by = "State") %>%
+  left_join(clean_pce, by = "State") %>%
+  left_join(clean_nyfed, by = "State") %>%
+  left_join(clean_unemploy, by = "State")
+
+merged_df
+```
+```{r}
+# export to file but I will # because we already have sync folder with github
+# write.csv(merged_df, "data/data-clean/FINAL.csv", row.names = FALSE)
+```
+
+
+
+# EDA
+
+
+```{r, warning=FALSE, message=FALSE}
+df<- read_csv("data/data-clean/FINAL.csv")
+
+df
+```
+
+
+# COVID Mapping Visualization
+
+# Visuals of economic indicators {.tabset}
+
+## GDP 
+
+```{r, warning=FALSE, message=FALSE}
+# compare GDP
+df %>% 
+  select(State, gdp_pre, gdp_post) %>% 
+  ggplot()+
+  geom_bar(mapping = aes(x=reorder(State, -gdp_post), y=gdp_pre
+                         , fill = "GDP pre = ((X2019 - X2017) / X2017) * 100")
+           , stat = "identity"
+           , position = position_nudge(x = -0.3)
+           , width = 0.4)+
+  geom_bar(mapping = aes(x=reorder(State, -gdp_post), y=gdp_post, fill ="GDP post = ((X2022 - X2020) / X2020) * 100")
+           , stat = "identity"
+           , position = position_nudge(x = 0.3)
+           , width = 0.4)+
+  labs(title = "Real GDP Growth: Pre vs Post COVID", y = "GDP Change (%)", x = "")+
+  theme(axis.text.x = element_text(angle = 90, hjust = 1), legend.position = "bottom")
+  
+```
+
+## Income
+
+```{r, warning=FALSE, message=FALSE}
+df %>%
+  select(State, income_pre, income_post) %>%
+  ggplot() +
+  geom_bar(mapping = aes(x = reorder(State, -income_post)
+                         , y = income_pre
+                         , fill = "Income pre = ((X2019 - X2017) / X2017) * 100")
+           , stat = "identity"
+           , position = position_nudge(x = -0.3)
+           , width = 0.4) +
+  geom_bar(mapping = aes(x = reorder(State, -income_post)
+                         , y = income_post
+                         , fill = "Income post = ((X2022 - X2020) / X2020) * 100")
+           ,stat = "identity"
+           , position = position_nudge(x = 0.3)
+           , width = 0.4) +
+  labs(title = "Personal Income Growth: Pre vs Post COVID", y = "Income Change (%)", x = "") +
+  theme(axis.text.x = element_text(angle = 90, hjust = 1), legend.position = "bottom")
+```
+
+## PCE
+
+```{r, warning=FALSE, message=FALSE}
+df %>%
+  select(State, pce_pre, pce_post) %>%
+  ggplot() +
+  geom_bar(mapping = aes(x = reorder(State, -pce_post)
+                         , y = pce_pre
+                         , fill = "PCE pre = ((X2019 - X2017) / X2017) * 100")
+           , stat = "identity"
+           , position = position_nudge(x = -0.3)
+           , width = 0.4) +
+  geom_bar(mapping = aes(x = reorder(State, -pce_post)
+                         , y = pce_post
+                         , fill = "PCE post = ((X2022 - X2020) / X2020) * 100")
+           , stat = "identity"
+           , position = position_nudge(x = 0.3)
+           , width = 0.4) +
+  labs(title = "Personal Consumption Expenditures Growth: Pre vs Post COVID",
+       y = "PCE Change (%)", x = "") +
+  theme(axis.text.x = element_text(angle = 90, hjust = 1), legend.position = "bottom")
+```
+
+## Unemployment Rate
+
+```{r, warning=FALSE, message=FALSE}
+
+df %>%
+  select(State, unemp_pre, unemp_post) %>%
+  ggplot() +
+  geom_bar(aes(x = reorder(State, -unemp_post)
+               , y = unemp_pre, 
+               fill = "Unemp pre = 2019 - 2017")
+           , stat = "identity"
+           , position = position_nudge(x = -0.3)
+           , width = 0.4) +
+  geom_bar(aes(x = reorder(State, -unemp_post)
+               , y = unemp_post
+               , fill = "Unemp post = (2022 - 2020)")
+           , stat = "identity"
+           , position = position_nudge(x = 0.3)
+           , width = 0.4) +
+  labs(title = "Unemployment Rate Change: 2017–2019 vs 2020–2022", y = "Change in Unemployment Rate", x = "") +
+  theme(axis.text.x = element_text(angle = 90, hjust = 1),legend.position = "bottom")
+
+```
+
+
+```{r, warning=FALSE, message=FALSE}
+
+df_emp <- df %>%
+  select(State, unemp_17, unemp_19, unemp_20, unemp_22)
+
+#df_emp
+
+df_long <- df_emp %>% 
+  pivot_longer(cols = starts_with("unemp_"), names_to = "Year", values_to = "Unemployment") %>%
+  mutate(Year = recode(Year,
+                       "unemp_17" = "2017",
+                       "unemp_19" = "2019",
+                       "unemp_20" = "2020",
+                       "unemp_22" = "2022"))
+
+#df_long 
+
+ggplot(df_long, aes(x = Year, y = Unemployment, group = State, color = State)) +
+  geom_line(size = 1) +
+  labs(title = "Unemployment Rate by State", y = "Unemployment Rate (%)", x = "Year") +
+  theme(legend.position = "none")
+```
+
+# Debt and  delinquency Visuals {.tabset}
+
+## creditcard
+
+
+| Variable Name             | Formula or Definition                           | Description                     |
+|---------------------------|-------------------------------------------------|---------------------------------|
+| creditcard_pre          | ((Q4_2019 - Q4_2017) / Q4_2017) × 100                | Credit card debt growth rate (Pre-COVID) |
+| creditcard_post         | ((Q4_2022 - Q4_2020) / Q4_2020) × 100                | Credit card debt growth rate (Post-COVID) |
+| creditcard_delinq_pre   | Q4_2019                                              | Credit card delinquency rate (Pre-COVID) |
+| creditcard_delinq_post  | Q4_2022                                              | Credit card delinquency rate (Post-COVID) |
+
+```{r, warning=FALSE, message=FALSE}
+credit_df <- df %>% 
+  select(State, creditcard_pre, creditcard_post) %>% 
+  pivot_longer(cols = c(creditcard_pre, creditcard_post),
+               names_to = "Time", values_to = "Change") %>% 
+  mutate(Time = factor(Time, levels = c("creditcard_pre", "creditcard_post")))
+
+## credit_df
+
+ggplot(credit_df, aes(x = State, y = Change, fill = Time)) +
+  geom_bar(stat = "identity", position = position_dodge(width = 0.7), width = 0.9) +  
+  labs(title = "Change Rate in Credit Card Dept",
+       y = "Credit Card Dept Change Rate (%)", x = "")+
+  theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust = 1),
+        legend.position = "bottom")
+```
+```{r, warning=FALSE, message=FALSE, fig.width=10, fig.height=10}
+credit_delinq_df <- df %>% 
+  select(State, creditcard_delinq_pre, creditcard_delinq_post) %>% 
+  pivot_longer(cols = c(creditcard_delinq_pre, creditcard_delinq_post),
+               names_to = "Time", values_to = "Change") %>% 
+  mutate(Time = factor(Time, levels = c("creditcard_delinq_pre", "creditcard_delinq_post")))
+
+#credit_delinq_df
+
+gg_debt <- ggplot(credit_df, aes(x = Time, y = Change, fill = Time)) +
+  geom_violin(trim = FALSE, alpha = 0.5) +
+  labs(title = "Credit Card Debt Change (%)", y = "Change Rate (%)", x = "")+
+  theme(legend.position = "bottom")
+
+#gg_debt 
+
+gg_delinq <- ggplot(credit_delinq_df, aes(x = Time, y = Change, fill = Time)) +
+  geom_violin(trim = FALSE, alpha = 0.5) +
+  labs(title = "Credit Card Delinquency Rate (%)", y = "Delinquency Rate (%)", x = "")+
+  theme(legend.position = "bottom")
+
+#gg_delinq
+
+grid.arrange(gg_debt, gg_delinq, ncol = 2)
+```
+
+## Mortgage
+
+```{r, warning=FALSE, message=FALSE, fig.width=12, fig.height=12}
+
+#Percent Change in Mortgage Debt Balance per Capita (2017 → 2019)
+qq1 <- ggplot(df, aes(x = "", y = mortgage_pre)) +
+  geom_boxplot(fill = "pink") +
+  labs(title = "Mortgage Debt per Capital -Pre", y = "Mortgage Dept Change Rate (%)")
+
+# Percent Change in Mortgage Debt Balance per Capita (2020 → 2022)
+qq2 <- ggplot(df, aes(x = "", y = mortgage_post)) +
+  geom_boxplot(fill = "skyblue") +
+  labs(title = "Mortgage Debt per Capital - Post", y = "Mortgage Dept Change Rate (%)")
+
+qq3 <- ggplot(df, aes(x = "", y = mortgage_delinq_pre)) +
+  geom_boxplot(fill = "orange") +
+  labs(title = "Mortgage Delinquency - Pre", y = "Delinquency Rate (%)")
+
+qq4 <- ggplot(df, aes(x = "", y = mortgage_delinq_post)) +
+  geom_boxplot(fill = "purple") +
+  labs(title = "Mortgage Delinquency - Post", y = "Delinquency Rate (%)")
+
+grid.arrange(qq1, qq2, qq3, qq4, ncol = 4)
+```
+
+
+## Student Loan
+
+```{r, warning=FALSE, message=FALSE}
+df %>%
+  select(State, studentloan_delinq_pre, studentloan_delinq_post) %>%
+  ggplot() +
+  geom_bar(aes(x = reorder(State, -studentloan_delinq_post)
+               , y = studentloan_delinq_pre
+               ,fill = "Student Loan pre = Q4_2019")
+           , stat = "identity"
+           , position = position_nudge(x = -0.3)
+           , width = 0.4) +
+  geom_bar(aes(x = reorder(State, -studentloan_delinq_post)
+               , y = studentloan_delinq_post
+               , fill = "Student Loan post = Q4_2022")
+           , stat = "identity"
+           , position = position_nudge(x = 0.3)
+           , width = 0.4) +
+  labs(title = "Student Loan Delinquency: Pre vs Post COVID", y = "Delinquency Rate (%)", x = "") +
+  theme(axis.text.x = element_text(angle = 90, hjust = 1),legend.position = "bottom")
+
+```
+
+```{r, warning=FALSE, message=FALSE}
+
+student_df <- df %>% 
+  select(State, studentloan_pre, studentloan_post) %>% 
+  pivot_longer(cols = c(studentloan_pre, studentloan_post), names_to = "Time", values_to = "Change") %>%
+  mutate(Time= ifelse(Time == "studentloan_pre", "Pre", "Post"))
+
+#student_df
+
+student_df$Time <- factor(student_df$Time, levels = c("Pre", "Post"))
+
+gg_student <- ggplot(student_df, aes(x = Time, y = Change, fill = Time)) +
+  geom_violin(trim = FALSE, alpha = 0.4) +
+  labs(title = "Student Loan Debt Change (%)", y = "Change Rate (%)", x = "") +
+  scale_fill_manual(values = c( "Pre" = "orange","Post" = "purple"))
+
+#gg_student
+
+#names(df)
+
+student_df2 <- df %>% 
+  select(State, studentloan_delinq_pre, studentloan_delinq_post) %>% 
+  pivot_longer(cols = c(studentloan_delinq_pre, studentloan_delinq_post), names_to = "Time", values_to = "Change") %>%
+  mutate(Time= ifelse(Time == "studentloan_delinq_pre", "Pre", "Post"))
+
+#student_df2
+
+student_df2$Time <- factor(student_df2$Time, levels = c("Pre", "Post"))
+
+gg_student2 <- ggplot(student_df2, aes(x = Time, y = Change, fill = Time)) +
+  geom_violin(trim = FALSE, alpha = 0.4) +
+  labs(title = "Student Loan Debt Deliq Change (%)", y = "Change Rate (%)", x = "") +
+  scale_fill_manual(values = c( "Pre" = "yellow", "Post" = "red"))
+
+#gg_student2
+
+grid.arrange(gg_student, gg_student2, ncol = 2)
+```
+
+
+## Auto
+```{r, warning=FALSE, message=FALSE}
+df_auto <- df %>%
+  select(auto_pre, auto_post, auto_delinq_pre, auto_delinq_post) %>%
+  pivot_longer(cols = everything(), names_to = "Category", values_to = "Value") %>% 
+  mutate(Category = factor(Category, levels = c("auto_pre", "auto_post", "auto_delinq_pre", "auto_delinq_post")))
+
+
+ggplot(df_auto, aes(x = Category, y = Value, fill = Category)) +
+  geom_boxplot() +
+  theme_minimal() +
+  labs(title = "Boxplots of Auto Loan and Delinquency (Pre vs Post)",
+       x = NULL,
+       y = "Value") +
+  theme(axis.text.x = element_text(angle = 20, hjust = 1), legend.position = "bottom")
+```
+
+
+# Housing Changing Rate Visualizations
 
 
 
