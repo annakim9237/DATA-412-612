@@ -1,0 +1,128 @@
+---
+title: "Stats"
+author: "Nabiha Chowdhury"
+date: "2025-04-22"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(tidyverse)
+clean_gdp <- read_csv("data/data-clean/GDP.csv")
+clean_income <- read_csv("data/data-clean/INCOME.csv")
+clean_nyfed <- read_csv("data/data-clean/NYFED.csv")
+clean_pce <- read_csv("data/data-clean/PCE.csv")
+clean_unemploy <- read_csv("data/data-clean/UNEMPLOY.csv")
+clean_housing<- read_csv("data/data-clean/HOUSING.csv")
+```
+
+# Statistics
+```{r}
+merged_df
+```
+
+
+## paired t-test
+
+### ZHVI 
+```{r}
+
+housing_summary <- clean_housing %>%
+  select(State, zhvi_pre_avg, zhvi_post_avg)
+
+# Run paired t-test 
+t_test_result <- t.test(housing_summary$zhvi_post_avg, housing_summary$zhvi_pre_avg, 
+                        paired = TRUE, alternative = "two.sided")
+
+t_test_result
+```
+
+### mortgage
+```{r}
+mortgage_summary <- merged_df %>%
+  select(State, mortgage_pre, mortgage_post)
+
+# Run paired t-test 
+t_test_result2 <- t.test(merged_df$mortgage_post,merged_df$mortgage_pre, 
+                        paired = TRUE, alternative = "two.sided")
+
+t_test_result2
+```
+### Income 
+```{r}
+income_summary <- merged_df %>%
+  select(State, income_pre, income_post)
+
+# Run paired t-test 
+t_test_result3 <- t.test(merged_df$income_post,merged_df$income_pre, 
+                        paired = TRUE, alternative = "two.sided")
+
+t_test_result3
+```
+
+
+## Correlation 
+
+### ZHVI
+```{r}
+# Correlation between housing prices pre and post
+cor_zhvi <- cor.test(merged_df$zhvi_pre_avg, merged_df$zhvi_post_avg, method = "pearson")
+cor_zhvi
+
+ggplot(merged_df, aes(x = zhvi_pre_avg, y = zhvi_post_avg)) +
+  geom_point(color = "blue") + 
+  geom_smooth(method = "lm", color = "red", se = TRUE) + 
+  labs(
+    title = "Correlation Between Pre and Post COVID Housing Prices",
+    subtitle = "Strong positive correlation between ZHVI pre- and post-pandemic",
+    x = "Pre-COVID Average Housing Prices (ZHVI)",
+    y = "Post-COVID Average Housing Prices (ZHVI)"
+  ) +
+  theme_minimal()
+```
+
+
+### mortgage
+```{r}
+cor_mort <- cor.test(merged_df$mortgage_pre, merged_df$mortgage_post, method = "pearson")
+cor_mort
+
+ggplot(merged_df, aes(x = mortgage_pre, y = mortgage_post)) +
+  geom_point(color = "blue") + 
+  geom_smooth(method = "lm", color = "red", se = TRUE) + 
+  labs(
+    title = "Correlation Between Pre and Post COVID Mortgage",
+    x = "Pre-COVID Average Mortgage",
+    y = "Post-COVID Average Mortgage"
+  ) +
+  theme_minimal()
+```
+
+### income
+```{r}
+cor_income <- cor.test(merged_df$income_pre, merged_df$income_post, method = "pearson")
+cor_income
+
+ggplot(merged_df, aes(x = income_pre, y = income_post)) +
+  geom_point(color = "blue") + 
+  geom_smooth(method = "lm", color = "red", se = TRUE) + 
+  labs(
+    title = "Correlation Between Pre and Post COVID Income",
+    x = "Pre-COVID Average Income",
+    y = "Post-COVID Average Income"
+  ) +
+  theme_minimal()
+```
+
+
+## Multiple linear regression
+
+### ZHVI
+```{r}
+# Multiple linear regression model
+model_multiple <- lm(zhvi_post_avg ~ zhvi_pre_avg + gdp_post + income_post + population_post, data = merged_df)
+
+# View summary
+summary(model_multiple)
+```
+
