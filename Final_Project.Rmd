@@ -29,6 +29,9 @@ library(gapminder)
 library(grid)
 library(ggplot2)
 library(gridExtra)
+
+library(maps)
+library(usmap)
 ```
 
 # Title {#Top}
@@ -104,12 +107,74 @@ File name: area_report_by_year.xlsx → NYFED.csv
 
 # DATA CLEANING {.tabset}
 
-## COVID DATA
+## COVID case for US
 
-### Covid cases for all of US
+```{r,warning=FALSE, message=FALSE}
+covid <- read_csv("data/cases_deaths.csv")
+#View(covid)
+
+covid_US <- covid %>% 
+  filter(country == "United States") %>% 
+  select(country, date, new_cases, total_cases, weekly_cases) %>%
+  mutate(date = as.Date(date)) %>%
+  mutate(year = year(date), month = month(date, label = TRUE, abbr = FALSE)) %>%
+  group_by(year, month) %>%
+  summarise(
+    monthly_new_cases = sum(new_cases, na.rm = TRUE),
+    latest_total_cases = max(total_cases, na.rm = TRUE),
+    total_weekly_cases = sum(weekly_cases, na.rm = TRUE),
+    .groups = "drop"
+  )
+
+covid_US
+
+```
+
+
+## COVID Cases per State
 ```{r, warning=FALSE, message=FALSE}
-##
+covidbystate <-read_csv("data/covid_confirmed_usafacts.csv")
 
+covidStatesDaily <- covidbystate %>% 
+  group_by(State) %>% 
+  summarize(across(where(is.numeric), sum, na.rm = TRUE))
+#covidStatesDaily
+
+covidstates <- covidStatesDaily %>% 
+  pivot_longer(
+    cols = -State,
+    names_to = "date",
+    values_to = "cases"
+  ) %>%
+  filter(str_detect(date, "^\\d{4}-\\d{2}-\\d{2}$")) %>%
+  mutate(
+    date = ymd(date),
+    year = year(date)
+  ) %>%
+  group_by(State, year) %>%
+  summarise(total_cases = max(cases, na.rm = TRUE), .groups = "drop")
+
+#covidstates
+```
+ 
+
+```{r, warning=FALSE, message=FALSE}
+case_summary <- summary(covidstates$total_cases)
+#case_summary
+
+covidstates <- covidstates %>% 
+  mutate(
+    severity = case_when(
+      total_cases <= case_summary[1] ~ "Very low",    
+      total_cases <= case_summary[2] ~ "Low", 
+      total_cases <= case_summary[3] ~ "Medium",    
+      total_cases <= case_summary[5] ~ "High", 
+      TRUE ~ "Very high"                              
+    )
+  )
+covidstates <- covidstates %>%
+  mutate(severity = factor(severity, levels = c("Very low", "Low", "Medium", "High", "Very high")))
+covidstates
 ```
 
 ## ZHVI
@@ -144,7 +209,7 @@ house_avg <- house_long2 %>%
 house2 <- house_avg %>%
   pivot_wider(names_from = year, values_from = mean_zhvi)
 
-house2
+#house2
 ```
 
 ```{r, warning=FALSE, message=FALSE}
@@ -547,19 +612,152 @@ merged_df
 
 
 
-# EDA
 
-
+# COVID Mapping Visualization {.tabset}
 ```{r, warning=FALSE, message=FALSE}
 df<- read_csv("data/data-clean/FINAL.csv")
 
-df
+#df
 ```
 
+## COVID distribution
 
-# COVID Mapping Visualization
+```{r, warning=FALSE, message=FALSE}
+#ggplot(covidstates, aes(x = severity, fill = severity)) +
+#  geom_bar() +
+#  labs(title = "Number of States by COVID Severity Level",
+#       x = "Severity Level", y = "Number of States") +
+#  scale_fill_manual(values = c("Very low" = "lightgreen", "Low" = "yellow", "Medium" = "orange", "High" = #"red", "Very high" = "brown")) +
+#  theme_minimal()
+
+ggplot(covidstates, aes(x = severity, y = total_cases, fill = severity)) +
+  geom_boxplot() +
+  labs(title = "Distribution of Total Cases by Severity Level",
+       x = "Severity", y = "Total Cases") +
+  scale_fill_manual(values = c("Very low" = "lightgreen", "Low" = "yellow", "Medium" = "orange", "High" = "red", "Very high" = "brown")) + theme_minimal()
+
+covidstates %>%
+  ggplot(aes(x = year, fill = severity)) +
+  geom_bar(position = "fill") +
+  labs(title = "Distribution of COVID Severity by Year",
+       y = "Proportion of States", x = "Year") +
+  scale_fill_manual(values = c("Very low" = "lightgreen", "Low" = "yellow", "Medium" = "orange", "High" = "red", "Very high" = "brown")) +
+  theme_minimal()
+```
+
+## 6 State
+
+```{r, warning=FALSE, message=FALSE}
+covidstates %>%
+  filter(State %in% c("CA", "TX", "NY", "IL", "AZ", "FL")) %>%
+  ggplot(aes(x = year, y = total_cases, color = State)) +
+  geom_line(size = 1.2) +
+  labs(title = "COVID Cases Over Time",
+       x = "Year", y = "Total Cases") +
+  theme_minimal()
+```
+
+## Covid state map
+
+```{r, warning=FALSE, message=FALSE}
+
+state_abbreviations <- data.frame(
+  abbreviation = state.abb, 
+  full_name = state.name  
+)
+
+
+covidstatesFULLNAME <- covidstates %>%
+  left_join(state_abbreviations, by = c("State" = "abbreviation")) %>%
+  mutate(State = tolower(full_name))%>%
+  select(-full_name)
+
+# map visualization code
+us_states <- map_data("state")
+us_states$region <- tolower(us_states$region) 
+
+# Merge the map data with the COVID data
+covid_map_data <- us_states %>%
+  left_join(covidstatesFULLNAME, by = c("region" = "State")) %>%
+  filter(!is.na(severity))
+
+
+ggplot(covid_map_data, aes(x = long, y = lat, group = group, fill = severity)) +
+  geom_polygon(color = "black") +
+  coord_fixed(1.1) +
+  labs(title = "COVID Case Severity by State",
+       fill = "Severity") +
+  scale_fill_manual(values = c("Very low" = "lightgreen", "Low" = "yellow", "Medium" = "orange", "High" = "red", "Very high"= "brown")) +
+  theme_void() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+
+# covidstatesFULLNAME
+# covidstates
+```
 
 # Visuals of economic indicators {.tabset}
+
+## Population {.tabset}
+
+### Pre (2017–2019)
+
+```{r, warning=FALSE, message=FALSE}
+
+merged_dfLC <- merged_df %>%
+  rename(state = State)
+
+## PRE covid populations
+plot_usmap(data = merged_dfLC, values = "population_pre", regions = "state") +
+  scale_fill_continuous(
+    name = "Population",
+    low = "lightgreen", high = "darkgreen", label = scales::comma
+  ) +
+  labs(title = "Pre-COVID Population (2017–2019)") +
+  theme(legend.position = "right")
+
+```
+
+### Post (2020–2022)
+```{r, warning=FALSE, message=FALSE}
+
+## POST covid populations
+plot_usmap(data = merged_dfLC, values = "population_post", regions = "state") +
+  scale_fill_continuous(
+    name = "Population",
+    low = "lightblue", high = "darkblue", label = scales::comma
+  ) +
+  labs(title = "Post-COVID Population (2020–2022)") +
+  theme(legend.position = "right")
+
+```
+
+### Comparison
+```{r, warning=FALSE, message=FALSE}
+###  pre and post side by side
+population_long <- merged_dfLC %>%
+  select(state, population_pre, population_post) %>%
+  pivot_longer(
+    cols = c(population_pre, population_post),
+    names_to = "period",
+    values_to = "population"
+  ) %>%
+  mutate(
+    period = recode(period,
+                    "population_pre" = "Pre-COVID (2017–2019)",
+                    "population_post" = "Post-COVID (2020–2022)"),
+    period = factor(period, levels = c("Pre-COVID (2017–2019)", "Post-COVID (2020–2022)"))
+  )
+
+plot_usmap(data = population_long, values = "population", regions = "state") +
+  facet_wrap(~ period) +
+  scale_fill_continuous(
+    name = "Population",
+    low = "lightgreen", high = "darkgreen", label = scales::comma
+  ) +
+  labs(title = "Population: Pre vs. Post COVID") +
+  theme(legend.position = "right")
+
+```
 
 ## GDP 
 
@@ -677,8 +875,9 @@ ggplot(df_long, aes(x = Year, y = Unemployment, group = State, color = State)) +
 
 # Debt and  delinquency Visuals {.tabset}
 
-## creditcard
+## creditcard {.tabset}
 
+### Fomula
 
 | Variable Name             | Formula or Definition                           | Description                     |
 |---------------------------|-------------------------------------------------|---------------------------------|
@@ -687,6 +886,7 @@ ggplot(df_long, aes(x = Year, y = Unemployment, group = State, color = State)) +
 | creditcard_delinq_pre   | Q4_2019                                              | Credit card delinquency rate (Pre-COVID) |
 | creditcard_delinq_post  | Q4_2022                                              | Credit card delinquency rate (Post-COVID) |
 
+### Visual 1
 ```{r, warning=FALSE, message=FALSE}
 credit_df <- df %>% 
   select(State, creditcard_pre, creditcard_post) %>% 
@@ -703,6 +903,8 @@ ggplot(credit_df, aes(x = State, y = Change, fill = Time)) +
   theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust = 1),
         legend.position = "bottom")
 ```
+
+### Visual 2
 ```{r, warning=FALSE, message=FALSE, fig.width=10, fig.height=10}
 credit_delinq_df <- df %>% 
   select(State, creditcard_delinq_pre, creditcard_delinq_post) %>% 
@@ -836,7 +1038,68 @@ ggplot(df_auto, aes(x = Category, y = Value, fill = Category)) +
 ```
 
 
-# Housing Changing Rate Visualizations
+# Housing Changing Rate Visualizations {.tabset}
 
+## Pre(2017–2019)
+
+```{r, warning=FALSE, message=FALSE}
+merged_dfLC <- merged_df %>%
+  rename(state = State)
+
+## heat map for PRE covid housing change rate
+plot_usmap(data = merged_dfLC, values = "zhvi_pre_change", regions = "state") +
+  scale_fill_continuous(
+    name = "Zillow Home Value Change (%)",
+    low = "lightyellow", high = "red", label = scales::comma
+  ) +
+  labs(title = "Pre-COVID Housing Price Change (2017–2019)") +
+  theme(legend.position = "right")
+
+```
+
+## Post(2020–2022)
+```{r, warning=FALSE, message=FALSE}
+
+## heat map for POST covid housing change rate
+plot_usmap(data = merged_dfLC, values = "zhvi_post_change", regions = "state") +
+  scale_fill_continuous(
+    name = "Zillow Home Value Change (%)",
+    low = "lightblue", high = "darkblue", label = scales::comma
+  ) +
+  labs(title = "Post-COVID Housing Price Change (2020–2022)") +
+  theme(legend.position = "right")
+
+```
+
+## Comparison
+
+```{r, warning=FALSE, message=FALSE}
+
+### both pre and post, side by side
+
+housing_long <- merged_dfLC %>%
+  select(state, zhvi_pre_change, zhvi_post_change) %>%
+  pivot_longer(
+    cols = c(zhvi_pre_change, zhvi_post_change),
+    names_to = "period",
+    values_to = "change"
+  ) %>%
+  mutate(
+    period = recode(period,
+                    "zhvi_pre_change" = "Pre-COVID (2017–2019)",
+                    "zhvi_post_change" = "Post-COVID (2020–2022)")) %>% 
+  mutate(period = factor(period, levels = c("Pre-COVID (2017–2019)", "Post-COVID (2020–2022)")))
+
+
+
+plot_usmap(data = housing_long, values = "change", regions = "state") +
+  facet_wrap(~ period) +
+  scale_fill_continuous(
+    name = "ZHVI Change (%)",
+    low = "lightyellow", high = "red", label = scales::comma
+  ) +
+  labs(title = "Housing Price Change: Pre vs. Post COVID") +
+  theme(legend.position = "right")
+```
 
 

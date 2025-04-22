@@ -150,6 +150,10 @@ plot_usmap(data = housing_long, values = "change", regions = "state") +
 ### population
 
 ```{r}
+
+merged_dfLC <- merged_df %>%
+  rename(state = State)
+
 ## PRE covid populations
 plot_usmap(data = merged_dfLC, values = "population_pre", regions = "state") +
   scale_fill_continuous(

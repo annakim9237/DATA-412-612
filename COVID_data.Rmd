@@ -15,7 +15,7 @@ library(lubridate)
 
 ### Covid cases for all of US
 ```{r}
-covid <- read_csv("~/Documents/GitHub/DATA-412-612/cases_deaths.csv")
+covid <- read_csv("data/cases_deaths.csv")
 #View(covid)
 
 covid_US <- covid %>% 
@@ -38,7 +38,7 @@ covid_US
  
 ### Covid cases per state per year
 ```{r}
-covidbystate <-read_csv("~/Documents/GitHub/DATA-412-612/covid_confirmed_usafacts.csv")
+covidbystate <-read_csv("data/covid_confirmed_usafacts.csv")
 
 covidStatesDaily <- covidbystate %>% 
   group_by(State) %>% 
