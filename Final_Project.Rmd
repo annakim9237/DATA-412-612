@@ -40,74 +40,76 @@ library(usmap)
 
 ## Introduction
 
-This project is to explore how the COVID-19 affected economic conditions especially housing price across U.S. states. Although the final goal is to analyze which factors contributed to post-COVID changes in housing prices, it also contains essential works: collecting, cleaning, visualizing and statistical analysis.
+This project is to explore how the COVID-19 pandemic affected economic conditions, focusing on housing price across U.S. states. Although the final goal is to analyze which factors contributed to post-COVID changes in housing prices, it also contains essential works: collecting, cleaning, visualizing and statistical analysis.
 
-## Data Soueces
+## Data Sources
 
-- ***COVID***
+-   ***COVID***
 
-- ***Zillow Home Value Index (ZHVI)***
+Includes two datasets: one providing nationwide annual COVID case totals and another offering state-by-state case counts from 2020 to 2023. These datasets help track the spread and intensity of the pandemic across different regions and time periods, offering important context for analyzing trends.
+
+Source: Centers for Disease Control and Prevention (CDC) (<https://covid.cdc.gov/COVID-DATA-TRACKER/#datatracker-home>) & USA Facts (<https://usafacts.org/visualizations/coronavirus-covid-19-spread-map/>)
+
+File name: cases_deaths.csv & covid_confirmed_usafacts.csv
+
+-   ***Zillow Home Value Index (ZHVI)***
 
 A measure of the typical home value and market changes across a given region and housing type. It reflects the typical value for homes in the 35th to 65th percentile range. Available as a smoothed, seasonally adjusted measure and as a raw measure.
 
-Source: Zillow Research (https://www.zillow.com/research/data/)
+Source: Zillow Research (<https://www.zillow.com/research/data/>)
 
 File name: State_zhvi_uc_sfrcondo_tier_0.33_0.67_sm_sa_month.csv
 
-- ***State unemployment rates over the last 10 years, seasonally adjusted***
+-   ***State unemployment rates over the last 10 years, seasonally adjusted***
 
 This dataset shows monthly unemployment rates by U.S. state. It is part of the Local Area Unemployment Statistics (LAUS) program by the Bureau of Labor Statistics (BLS). The data is seasonally adjusted and helps track labor market trends at the state level over time.
 
-Source :U.S. Bureau of Labor Statistics (https://www.bls.gov/charts/state-employment-and-unemployment/state-unemployment-rates-animated.htm)
+Source :U.S. Bureau of Labor Statistics (<https://www.bls.gov/charts/state-employment-and-unemployment/state-unemployment-rates-animated.htm>)
 
 File name: unemployment rate.xlxs
 
-- ***Personal Consumption Expenditures (PCE)***
+-   ***Personal Consumption Expenditures (PCE)***
 
 Reports annual state-level PCE data, measuring average household spending across different regions.
 
-Source: Bureau of Economic Analysis (BEA) (https://apps.bea.gov/regional/downloadzip.htm)
+Source: Bureau of Economic Analysis (BEA) (<https://apps.bea.gov/regional/downloadzip.htm>)
 
-File name: SAPCE1__ALL_AREAS_1997_2023.csv 
+File name: SAPCE1\_\_ALL_AREAS_1997_2023.csv
 
-- ***Annual Personal Income ***
+-   ***Annual Personal Income***
 
-Includes annual personal income per capita by state. Useful for assessing economic status and regional income disparities.
-Source: Bureau of Economic Analysis (BEA)
-File name: SAINC1__ALL_AREAS_1929_2024.csv → INCOME.csv
+Includes annual personal income per capita by state. Useful for assessing economic status and regional income disparities. Source: Bureau of Economic Analysis (BEA) File name: SAINC1\_\_ALL_AREAS_1929_2024.csv → INCOME.csv
 
-- ***Gross Domestic Product (GDP) ***
+-   ***Gross Domestic Product (GDP)***
 
 Provides real GDP data by state from 1997 to 2024. This helps analyze economic output and growth across regions.
 
 Source: Bureau of Economic Analysis (BEA)
 
-File name: SAGDP1__ALL_AREAS_1997_2024.csv
+File name: SAGDP1\_\_ALL_AREAS_1997_2024.csv
 
-- ***State Level population and Household Debt Statistics ***
+-   ***State Level population and Household Debt Statistics***
 
 Includes per capita credit card debt and total household debt across states. Used to assess consumer financial health.
 
-| Sheet                    | Title                                                           |
-|--------------------------|-----------------------------------------------------------------|
-| population               | Number of Consumers in New York Fed Consumer Credit Panel       |
-| auto loan                | Auto Debt Balance per Capita                                    |
-| credit card              | Credit Card Debt Balance per Capita                             |
-| mortgage                 | Mortgage Debt Balance per Capita (excluding HELOC)              |
-| student loan             | Student Loan Debt Balance per Capita                            |
-| total                    | Total Debt Balance per Capita                                   |
-| auto loan delinquency    | Percent of Auto Debt Balance 90+ Days Delinquent                |
-| credit card delinquency  | Percent of Credit Card Debt Balance 90+ Days Delinquent         |
-| mortgage delinquency     | Percent of Mortgage Debt Balance 90+ Days Delinquent            |
+| Sheet | Title |
+|---------------------|---------------------------------------------------|
+| population | Number of Consumers in New York Fed Consumer Credit Panel |
+| auto loan | Auto Debt Balance per Capita |
+| credit card | Credit Card Debt Balance per Capita |
+| mortgage | Mortgage Debt Balance per Capita (excluding HELOC) |
+| student loan | Student Loan Debt Balance per Capita |
+| total | Total Debt Balance per Capita |
+| auto loan delinquency | Percent of Auto Debt Balance 90+ Days Delinquent |
+| credit card delinquency | Percent of Credit Card Debt Balance 90+ Days Delinquent |
+| mortgage delinquency | Percent of Mortgage Debt Balance 90+ Days Delinquent |
 | student loan delinquency | Percent of Student Loan Debt Balance 90+ Days Delinquent (and in default) |
 
-
-Source: New York Fed (https://www.newyorkfed.org/microeconomics/databank.html)
-File name: area_report_by_year.xlsx → NYFED.csv
+Source: New York Fed (<https://www.newyorkfed.org/microeconomics/databank.html>) File name: area_report_by_year.xlsx → NYFED.csv
 
 # DATA CLEANING {.tabset}
 
-## COVID case for US
+## COVID Cases US
 
 ```{r,warning=FALSE, message=FALSE}
 covid <- read_csv("data/cases_deaths.csv")
@@ -130,8 +132,8 @@ covid_US
 
 ```
 
-
 ## COVID Cases per State
+
 ```{r, warning=FALSE, message=FALSE}
 covidbystate <-read_csv("data/covid_confirmed_usafacts.csv")
 
@@ -156,7 +158,6 @@ covidstates <- covidStatesDaily %>%
 
 #covidstates
 ```
- 
 
 ```{r, warning=FALSE, message=FALSE}
 case_summary <- summary(covidstates$total_cases)
@@ -275,11 +276,11 @@ unemploy_final <- unemploy3 %>%
 
 unemploy_final
 ```
+
 ```{r}
 # export to file but I will # because we already have sync folder with github
 #write.csv(unemploy_final, "data/data-clean/UNEMPLOY.csv", row.names = FALSE)
 ```
-
 
 ## PCE
 
@@ -309,8 +310,7 @@ head(pce_final)
 #write.csv(pce_final, "data/data-clean/PCE.csv", row.names = FALSE)
 ```
 
-
-## Annual Personal Income 
+## Annual Personal Income
 
 ```{r, warning=FALSE, message=FALSE}
 income <- read.csv("data/SAINC1__ALL_AREAS_1929_2024.csv")
@@ -337,7 +337,6 @@ head(income_final)
 # export to file but I will # because we already have sync folder with github
 #write.csv(income_final, "data/data-clean/INCOME.csv", row.names = FALSE)
 ```
-
 
 ## GDP
 
@@ -440,7 +439,6 @@ creditcard_clean <- creditcard %>%
 # creditcard_clean
 ```
 
-
 ```{r, warning=FALSE, message=FALSE}
 auto_clean <- auto %>%
   filter(!is.na(state)) %>%
@@ -488,7 +486,6 @@ total_clean <- total %>%
 
 # total_clean 
 ```
-
 
 ```{r, warning=FALSE, message=FALSE}
 creditcard_delinq_clean <- creditcard_delinq %>%
@@ -553,6 +550,7 @@ NYFED_df <- population_clean %>%
 
 head(NYFED_df)
 ```
+
 ```{r, warning=FALSE, message=FALSE}
 # Export final result if needed
 #write.csv(NYFED_df, "data/data-clean/NYFED.csv", row.names = FALSE)
@@ -605,23 +603,23 @@ merged_df <- clean_housing %>%
 
 merged_df
 ```
+
 ```{r}
 # export to file but I will # because we already have sync folder with github
 # write.csv(merged_df, "data/data-clean/FINAL.csv", row.names = FALSE)
 ```
 
-
-
-
 # COVID Mapping Visualization {.tabset}
+
 ```{r, warning=FALSE, message=FALSE}
 df<- read_csv("data/data-clean/FINAL.csv")
 
 #df
 ```
 
-## COVID distribution
+## COVID distribution  {.tabset}
 
+### Severity
 ```{r, warning=FALSE, message=FALSE}
 #ggplot(covidstates, aes(x = severity, fill = severity)) +
 #  geom_bar() +
@@ -635,7 +633,10 @@ ggplot(covidstates, aes(x = severity, y = total_cases, fill = severity)) +
   labs(title = "Distribution of Total Cases by Severity Level",
        x = "Severity", y = "Total Cases") +
   scale_fill_manual(values = c("Very low" = "lightgreen", "Low" = "yellow", "Medium" = "orange", "High" = "red", "Very high" = "brown")) + theme_minimal()
+```
 
+### By year (2020-2023)
+```{r, warning=FALSE, message=FALSE}
 covidstates %>%
   ggplot(aes(x = year, fill = severity)) +
   geom_bar(position = "fill") +
@@ -645,7 +646,7 @@ covidstates %>%
   theme_minimal()
 ```
 
-## 6 State
+## 6 States
 
 ```{r, warning=FALSE, message=FALSE}
 covidstates %>%
@@ -657,7 +658,7 @@ covidstates %>%
   theme_minimal()
 ```
 
-## Covid state map
+## COVID US Map
 
 ```{r, warning=FALSE, message=FALSE}
 
@@ -695,7 +696,7 @@ ggplot(covid_map_data, aes(x = long, y = lat, group = group, fill = severity)) +
 # covidstates
 ```
 
-# Visuals of economic indicators {.tabset}
+# Visuals of Economic Indicators {.tabset}
 
 ## Population {.tabset}
 
@@ -718,6 +719,7 @@ plot_usmap(data = merged_dfLC, values = "population_pre", regions = "state") +
 ```
 
 ### Post (2020–2022)
+
 ```{r, warning=FALSE, message=FALSE}
 
 ## POST covid populations
@@ -732,6 +734,7 @@ plot_usmap(data = merged_dfLC, values = "population_post", regions = "state") +
 ```
 
 ### Comparison
+
 ```{r, warning=FALSE, message=FALSE}
 ###  pre and post side by side
 population_long <- merged_dfLC %>%
@@ -759,7 +762,7 @@ plot_usmap(data = population_long, values = "population", regions = "state") +
 
 ```
 
-## GDP 
+## GDP
 
 ```{r, warning=FALSE, message=FALSE}
 # compare GDP
@@ -849,7 +852,6 @@ df %>%
 
 ```
 
-
 ```{r, warning=FALSE, message=FALSE}
 
 df_emp <- df %>%
@@ -873,20 +875,21 @@ ggplot(df_long, aes(x = Year, y = Unemployment, group = State, color = State)) +
   theme(legend.position = "none")
 ```
 
-# Debt and  delinquency Visuals {.tabset}
+# Debt & Delinquency Visuals {.tabset}
 
-## creditcard {.tabset}
+## Credit Card {.tabset}
 
 ### Fomula
 
-| Variable Name             | Formula or Definition                           | Description                     |
-|---------------------------|-------------------------------------------------|---------------------------------|
-| creditcard_pre          | ((Q4_2019 - Q4_2017) / Q4_2017) × 100                | Credit card debt growth rate (Pre-COVID) |
-| creditcard_post         | ((Q4_2022 - Q4_2020) / Q4_2020) × 100                | Credit card debt growth rate (Post-COVID) |
-| creditcard_delinq_pre   | Q4_2019                                              | Credit card delinquency rate (Pre-COVID) |
-| creditcard_delinq_post  | Q4_2022                                              | Credit card delinquency rate (Post-COVID) |
+| Variable Name | Formula or Definition | Description |
+|------------------|--------------------------------|----------------------|
+| creditcard_pre | ((Q4_2019 - Q4_2017) / Q4_2017) × 100 | Credit card debt growth rate (Pre-COVID) |
+| creditcard_post | ((Q4_2022 - Q4_2020) / Q4_2020) × 100 | Credit card debt growth rate (Post-COVID) |
+| creditcard_delinq_pre | Q4_2019 | Credit card delinquency rate (Pre-COVID) |
+| creditcard_delinq_post | Q4_2022 | Credit card delinquency rate (Post-COVID) |
 
 ### Visual 1
+
 ```{r, warning=FALSE, message=FALSE}
 credit_df <- df %>% 
   select(State, creditcard_pre, creditcard_post) %>% 
@@ -905,6 +908,7 @@ ggplot(credit_df, aes(x = State, y = Change, fill = Time)) +
 ```
 
 ### Visual 2
+
 ```{r, warning=FALSE, message=FALSE, fig.width=10, fig.height=10}
 credit_delinq_df <- df %>% 
   select(State, creditcard_delinq_pre, creditcard_delinq_post) %>% 
@@ -955,7 +959,6 @@ qq4 <- ggplot(df, aes(x = "", y = mortgage_delinq_post)) +
 
 grid.arrange(qq1, qq2, qq3, qq4, ncol = 4)
 ```
-
 
 ## Student Loan
 
@@ -1019,8 +1022,8 @@ gg_student2 <- ggplot(student_df2, aes(x = Time, y = Change, fill = Time)) +
 grid.arrange(gg_student, gg_student2, ncol = 2)
 ```
 
-
 ## Auto
+
 ```{r, warning=FALSE, message=FALSE}
 df_auto <- df %>%
   select(auto_pre, auto_post, auto_delinq_pre, auto_delinq_post) %>%
@@ -1037,10 +1040,9 @@ ggplot(df_auto, aes(x = Category, y = Value, fill = Category)) +
   theme(axis.text.x = element_text(angle = 20, hjust = 1), legend.position = "bottom")
 ```
 
+# Housing Change Rate Visualizations {.tabset}
 
-# Housing Changing Rate Visualizations {.tabset}
-
-## Pre(2017–2019)
+## Pre (2017–2019)
 
 ```{r, warning=FALSE, message=FALSE}
 merged_dfLC <- merged_df %>%
@@ -1057,7 +1059,8 @@ plot_usmap(data = merged_dfLC, values = "zhvi_pre_change", regions = "state") +
 
 ```
 
-## Post(2020–2022)
+## Post (2020–2022)
+
 ```{r, warning=FALSE, message=FALSE}
 
 ## heat map for POST covid housing change rate
@@ -1101,5 +1104,3 @@ plot_usmap(data = housing_long, values = "change", regions = "state") +
   labs(title = "Housing Price Change: Pre vs. Post COVID") +
   theme(legend.position = "right")
 ```
-
-
