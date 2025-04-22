@@ -15,7 +15,7 @@ library(lubridate)
 
 ### Covid cases for all of US
 ```{r}
-covid <- read_csv("~/Downloads/cases_deaths.csv")
+covid <- read_csv("~/Documents/GitHub/DATA-412-612/cases_deaths.csv")
 #View(covid)
 
 covid_US <- covid %>% 
@@ -38,14 +38,14 @@ covid_US
  
 ### Covid cases per state per year
 ```{r}
-covidbystate <- read_csv("~/Downloads/covid_confirmed_usafacts.csv")
+covidbystate <-read_csv("~/Documents/GitHub/DATA-412-612/covid_confirmed_usafacts.csv")
 
 covidStatesDaily <- covidbystate %>% 
   group_by(State) %>% 
-  summarise(across(where(is.numeric), sum, na.rm = TRUE))
+  summarize(across(where(is.numeric), sum, na.rm = TRUE))
 #covidStatesDaily
 
-covid_states <- covidStatesDaily %>% 
+covidstates <- covidStatesDaily %>% 
   pivot_longer(
     cols = -State,
     names_to = "date",
@@ -70,32 +70,16 @@ case_summary
 covidstates <- covidstates %>% 
   mutate(
     severity = case_when(
-      total_cases <= case_summary[2] ~ "Low",     # Q1 (25%)
-      total_cases <= case_summary[5] ~ "Medium",  # Q3 (75%)
-      TRUE ~ "High"                               # Above Q3
+      total_cases <= case_summary[1] ~ "Very low",    
+      total_cases <= case_summary[2] ~ "Low", 
+      total_cases <= case_summary[3] ~ "Medium",    
+      total_cases <= case_summary[5] ~ "High", 
+      TRUE ~ "Very high"                              
     )
   )
-
+covidstates <- covidstates %>%
+  mutate(severity = factor(severity, levels = c("Very low", "Low", "Medium", "High", "Very high")))
 covidstates
-```
-
-
-
-```{r}
-case_summary <- summary(covidstates$total_cases)
-case_summary
-
-covidstates2 <- covidstates %>% 
-  mutate(
-    severity = case_when(
-      total_cases <= 300000 ~ "Low",     # Q1 (25%)
-      total_cases <= 700000 ~ "Medium",  # Q3 (75%)
-      TRUE ~ "High"                               # Above Q3
-    )
-  )
-
-covidstates2
-```
 ```
 
 
