@@ -1,5 +1,5 @@
 ---
-title: "Final_Project"
+title: "How COVID affected the Economy"
 author: "Nabiha Chowdhury & Anna Hyunjung Kim"
 date: "`r Sys.Date()`"
 output: 
@@ -1200,7 +1200,7 @@ plot_usmap(data = housing_long, values = "change", regions = "state") +
 
 #  Statistic {.tabset}
 
-## paired t-test  {.tabset}
+## Paired t-test  {.tabset}
 
 ### ZHVI
 
@@ -1215,7 +1215,7 @@ t_test_result <- t.test(housing_summary$zhvi_post_avg, housing_summary$zhvi_pre_
 t_test_result
 ```
 
-### mortgage
+### Mortgage
 
 ```{r, warning=FALSE, message=FALSE}
 mortgage_summary <- merged_df %>%
@@ -1262,7 +1262,7 @@ ggplot(merged_df, aes(x = zhvi_pre_avg, y = zhvi_post_avg)) +
   theme_minimal()
 ```
 
-### mortgage
+### Mortgage
 
 ```{r, warning=FALSE, message=FALSE}
 cor_mort <- cor.test(merged_df$mortgage_pre, merged_df$mortgage_post, method = "pearson")
@@ -1279,7 +1279,7 @@ ggplot(merged_df, aes(x = mortgage_pre, y = mortgage_post)) +
   theme_minimal()
 ```
 
-### income
+### Income
 
 ```{r, warning=FALSE, message=FALSE}
 cor_income <- cor.test(merged_df$income_pre, merged_df$income_post, method = "pearson")
@@ -1296,7 +1296,7 @@ ggplot(merged_df, aes(x = income_pre, y = income_post)) +
   theme_minimal()
 ```
 
-## Multiple linear regression {.tabset}
+## Multiple Linear Regression {.tabset}
 
 ### ZHVI model 1
 
@@ -1323,6 +1323,7 @@ summary(model_multiple)
 df_stat <- read_csv("data/data-clean/FINAL.csv")
 # df_stat
 ```
+
 ## ANOVA {.tabset}
 
 
