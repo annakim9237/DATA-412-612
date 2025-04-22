@@ -33,6 +33,11 @@ library(gridExtra)
 library(maps)
 library(usmap)
 
+# install.packages("DescTools")
+# install.packages("car")
+# install.packages("rpart")
+# install.packages("rpart.plot")
+
 library(DescTools)
 library(car)
 library(rpart)
@@ -614,7 +619,7 @@ merged_df
 # write.csv(merged_df, "data/data-clean/FINAL.csv", row.names = FALSE)
 ```
 
-# COVID Mapping Visualization {.tabset}
+# COVID Mapping Visualization (EDA) {.tabset}
 
 ```{r, warning=FALSE, message=FALSE}
 df<- read_csv("data/data-clean/FINAL.csv")
@@ -701,7 +706,7 @@ ggplot(covid_map_data, aes(x = long, y = lat, group = group, fill = severity)) +
 # covidstates
 ```
 
-# Visuals of Economic Indicators {.tabset}
+# Visuals of Economic Indicators (EDA) {.tabset}
 
 ## Population {.tabset}
 
@@ -1195,6 +1200,124 @@ plot_usmap(data = housing_long, values = "change", regions = "state") +
 
 #  Statistic {.tabset}
 
+## paired t-test  {.tabset}
+
+### ZHVI
+
+```{r, warning=FALSE, message=FALSE}
+housing_summary <- clean_housing %>%
+  select(State, zhvi_pre_avg, zhvi_post_avg)
+
+# Run paired t-test 
+t_test_result <- t.test(housing_summary$zhvi_post_avg, housing_summary$zhvi_pre_avg, 
+                        paired = TRUE, alternative = "two.sided")
+
+t_test_result
+```
+
+### mortgage
+
+```{r, warning=FALSE, message=FALSE}
+mortgage_summary <- merged_df %>%
+  select(State, mortgage_pre, mortgage_post)
+
+# Run paired t-test 
+t_test_result2 <- t.test(merged_df$mortgage_post,merged_df$mortgage_pre, 
+                        paired = TRUE, alternative = "two.sided")
+
+t_test_result2
+```
+
+### Income
+
+```{r, warning=FALSE, message=FALSE}
+income_summary <- merged_df %>%
+  select(State, income_pre, income_post)
+
+# Run paired t-test 
+t_test_result3 <- t.test(merged_df$income_post,merged_df$income_pre, 
+                        paired = TRUE, alternative = "two.sided")
+
+t_test_result3
+```
+
+## Correlation  {.tabset}
+
+### ZHVI
+
+```{r, warning=FALSE, message=FALSE}
+# Correlation between housing prices pre and post
+cor_zhvi <- cor.test(merged_df$zhvi_pre_avg, merged_df$zhvi_post_avg, method = "pearson")
+cor_zhvi
+
+ggplot(merged_df, aes(x = zhvi_pre_avg, y = zhvi_post_avg)) +
+  geom_point(color = "blue") + 
+  geom_smooth(method = "lm", color = "red", se = TRUE) + 
+  labs(
+    title = "Correlation Between Pre and Post COVID Housing Prices",
+    subtitle = "Strong positive correlation between ZHVI pre- and post-pandemic",
+    x = "Pre-COVID Average Housing Prices (ZHVI)",
+    y = "Post-COVID Average Housing Prices (ZHVI)"
+  ) +
+  theme_minimal()
+```
+
+### mortgage
+
+```{r, warning=FALSE, message=FALSE}
+cor_mort <- cor.test(merged_df$mortgage_pre, merged_df$mortgage_post, method = "pearson")
+cor_mort
+
+ggplot(merged_df, aes(x = mortgage_pre, y = mortgage_post)) +
+  geom_point(color = "blue") + 
+  geom_smooth(method = "lm", color = "red", se = TRUE) + 
+  labs(
+    title = "Correlation Between Pre and Post COVID Mortgage",
+    x = "Pre-COVID Average Mortgage",
+    y = "Post-COVID Average Mortgage"
+  ) +
+  theme_minimal()
+```
+
+### income
+
+```{r, warning=FALSE, message=FALSE}
+cor_income <- cor.test(merged_df$income_pre, merged_df$income_post, method = "pearson")
+cor_income
+
+ggplot(merged_df, aes(x = income_pre, y = income_post)) +
+  geom_point(color = "blue") + 
+  geom_smooth(method = "lm", color = "red", se = TRUE) + 
+  labs(
+    title = "Correlation Between Pre and Post COVID Income",
+    x = "Pre-COVID Average Income",
+    y = "Post-COVID Average Income"
+  ) +
+  theme_minimal()
+```
+
+## Multiple linear regression {.tabset}
+
+### ZHVI model 1
+
+```{r, warning=FALSE, message=FALSE}
+# Multiple linear regression model
+model_multiple <- lm(zhvi_post_avg ~ zhvi_pre_avg + gdp_post + income_post + population_post, data = merged_df)
+
+# View summary
+summary(model_multiple)
+```
+
+### ZHVI model 2
+
+```{r, warning=FALSE, message=FALSE}
+# Multiple linear regression model
+model_multiple <- lm(zhvi_post_avg ~ zhvi_pre_avg + gdp_post + population_post, data = merged_df)
+
+# View summary
+summary(model_multiple)
+```
+
 ```{r, warning=FALSE, message=FALSE}
 
 df_stat <- read_csv("data/data-clean/FINAL.csv")
@@ -1422,7 +1545,7 @@ datatable(tree_nodes,
           caption = "state")
 ```
 
-## Clustering
+## Clustering {.tabset}
 
 ### 6 vars
 ```{r}

@@ -17,14 +17,15 @@ clean_housing<- read_csv("data/data-clean/HOUSING.csv")
 ```
 
 # Statistics
+
 ```{r}
 merged_df
 ```
 
-
 ## paired t-test
 
-### ZHVI 
+### ZHVI
+
 ```{r}
 
 housing_summary <- clean_housing %>%
@@ -38,6 +39,7 @@ t_test_result
 ```
 
 ### mortgage
+
 ```{r}
 mortgage_summary <- merged_df %>%
   select(State, mortgage_pre, mortgage_post)
@@ -48,7 +50,9 @@ t_test_result2 <- t.test(merged_df$mortgage_post,merged_df$mortgage_pre,
 
 t_test_result2
 ```
-### Income 
+
+### Income
+
 ```{r}
 income_summary <- merged_df %>%
   select(State, income_pre, income_post)
@@ -60,10 +64,10 @@ t_test_result3 <- t.test(merged_df$income_post,merged_df$income_pre,
 t_test_result3
 ```
 
-
-## Correlation 
+## Correlation
 
 ### ZHVI
+
 ```{r}
 # Correlation between housing prices pre and post
 cor_zhvi <- cor.test(merged_df$zhvi_pre_avg, merged_df$zhvi_post_avg, method = "pearson")
@@ -81,8 +85,8 @@ ggplot(merged_df, aes(x = zhvi_pre_avg, y = zhvi_post_avg)) +
   theme_minimal()
 ```
 
-
 ### mortgage
+
 ```{r}
 cor_mort <- cor.test(merged_df$mortgage_pre, merged_df$mortgage_post, method = "pearson")
 cor_mort
@@ -99,6 +103,7 @@ ggplot(merged_df, aes(x = mortgage_pre, y = mortgage_post)) +
 ```
 
 ### income
+
 ```{r}
 cor_income <- cor.test(merged_df$income_pre, merged_df$income_post, method = "pearson")
 cor_income
@@ -114,10 +119,10 @@ ggplot(merged_df, aes(x = income_pre, y = income_post)) +
   theme_minimal()
 ```
 
-
 ## Multiple linear regression
 
 ### ZHVI
+
 ```{r}
 # Multiple linear regression model
 model_multiple <- lm(zhvi_post_avg ~ zhvi_pre_avg + gdp_post + income_post + population_post, data = merged_df)
@@ -125,4 +130,3 @@ model_multiple <- lm(zhvi_post_avg ~ zhvi_pre_avg + gdp_post + income_post + pop
 # View summary
 summary(model_multiple)
 ```
-
