@@ -255,7 +255,7 @@ clusters2 <- c("population_post", "income_post", "total_post", "zhvi_post_avg")
 cluster_z2 <- scale(df_stat[, clusters2])
 
 set.seed(612)
-kmeans2 <- kmeans(cluster_z2, centers = 3)
+kmeans2 <- kmeans(cluster_z2, centers = 6)
 df_stat$cluster2 <- as.factor(kmeans2$cluster)
 
 ggplot(df_stat, aes(x = cluster2, y = zhvi_post_change, fill = cluster2)) +

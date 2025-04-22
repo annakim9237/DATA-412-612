@@ -32,6 +32,11 @@ library(gridExtra)
 
 library(maps)
 library(usmap)
+
+library(DescTools)
+library(car)
+library(rpart)
+library(rpart.plot)
 ```
 
 # Title {#Top}
@@ -700,6 +705,13 @@ ggplot(covid_map_data, aes(x = long, y = lat, group = group, fill = severity)) +
 
 ## Population {.tabset}
 
+### Formula
+
+Variable Name | Formula or Definition | Description
+|------------------|--------------------------------|----------------------|
+population_pre | ((Population_2019 - Population_2017) / Population_2017) × 100 | Population growth rate (Pre-COVID)
+population_post | ((Population_2022 - Population_2020) / Population_2020) × 100 | Population growth rate (Post-COVID)
+
 ### Pre (2017–2019)
 
 ```{r, warning=FALSE, message=FALSE}
@@ -745,7 +757,7 @@ population_long <- merged_dfLC %>%
     values_to = "population"
   ) %>%
   mutate(
-    period = recode(period,
+    period = dplyr::recode(period,
                     "population_pre" = "Pre-COVID (2017–2019)",
                     "population_post" = "Post-COVID (2020–2022)"),
     period = factor(period, levels = c("Pre-COVID (2017–2019)", "Post-COVID (2020–2022)"))
@@ -762,7 +774,16 @@ plot_usmap(data = population_long, values = "population", regions = "state") +
 
 ```
 
-## GDP
+## GDP {.tabset}
+
+### Formula
+
+Variable Name | Formula or Definition | Description
+|------------------|--------------------------------|----------------------| 
+gdp_pre | ((GDP_2019 - GDP_2017) / GDP_2017) × 100 | GDP growth rate (Pre-COVID)
+gdp_post | ((GDP_2022 - GDP_2020) / GDP_2020) × 100 | GDP growth rate (Post-COVID)
+
+### Visual
 
 ```{r, warning=FALSE, message=FALSE}
 # compare GDP
@@ -783,7 +804,16 @@ df %>%
   
 ```
 
-## Income
+## Income {.tabset}
+
+### Formula
+
+Variable Name | Formula or Definition | Description
+|------------------|--------------------------------|----------------------| 
+income_pre | ((Income_2019 - Income_2017) / Income_2017) × 100 | Personal income growth (Pre-COVID)
+income_post | ((Income_2022 - Income_2020) / Income_2020) × 100 | Personal income growth (Post-COVID)
+
+### Visual
 
 ```{r, warning=FALSE, message=FALSE}
 df %>%
@@ -805,7 +835,16 @@ df %>%
   theme(axis.text.x = element_text(angle = 90, hjust = 1), legend.position = "bottom")
 ```
 
-## PCE
+## PCE {.tabset}
+
+### Formula
+
+Variable Name | Formula or Definition | Description
+|------------------|--------------------------------|----------------------| 
+pce_pre | ((PCE_2019 - PCE_2017) / PCE_2017) × 100 | PCE growth rate (Pre-COVID)
+pce_post | ((PCE_2022 - PCE_2020) / PCE_2020) × 100 | PCE growth rate (Post-COVID)
+
+### Visual
 
 ```{r, warning=FALSE, message=FALSE}
 df %>%
@@ -828,7 +867,16 @@ df %>%
   theme(axis.text.x = element_text(angle = 90, hjust = 1), legend.position = "bottom")
 ```
 
-## Unemployment Rate
+## Unemployment Rate {.tabset}
+
+### Formula
+
+Variable Name | Formula or Definition | Description
+|------------------|--------------------------------|----------------------| 
+unemp_pre | Unemp_2019 - Unemp_2017 | Change in unemployment rate (Pre-COVID)
+unemp_post | Unemp_2022 - Unemp_2020 | Change in unemployment rate (Post-COVID)
+
+### Visual
 
 ```{r, warning=FALSE, message=FALSE}
 
@@ -861,7 +909,7 @@ df_emp <- df %>%
 
 df_long <- df_emp %>% 
   pivot_longer(cols = starts_with("unemp_"), names_to = "Year", values_to = "Unemployment") %>%
-  mutate(Year = recode(Year,
+  mutate(Year = dplyr::recode(Year,
                        "unemp_17" = "2017",
                        "unemp_19" = "2019",
                        "unemp_20" = "2020",
@@ -935,7 +983,18 @@ gg_delinq <- ggplot(credit_delinq_df, aes(x = Time, y = Change, fill = Time)) +
 grid.arrange(gg_debt, gg_delinq, ncol = 2)
 ```
 
-## Mortgage
+## Mortgage {.tabset}
+
+### Formula
+
+Variable Name | Formula or Definition | Description
+|------------------|--------------------------------|----------------------|
+mortgage_pre | ((Q4_2019 - Q4_2017) / Q4_2017) × 100 | Mortgage debt growth rate (Pre-COVID)
+mortgage_post | ((Q4_2022 - Q4_2020) / Q4_2020) × 100 | Mortgage debt growth rate (Post-COVID)
+mortgage_delinq_pre | Q4_2019 | Mortgage delinquency rate (Pre-COVID)
+mortgage_delinq_post | Q4_2022 | Mortgage delinquency rate (Post-COVID)
+
+### Visual
 
 ```{r, warning=FALSE, message=FALSE, fig.width=12, fig.height=12}
 
@@ -960,7 +1019,17 @@ qq4 <- ggplot(df, aes(x = "", y = mortgage_delinq_post)) +
 grid.arrange(qq1, qq2, qq3, qq4, ncol = 4)
 ```
 
-## Student Loan
+## Student Loan {.tabset}
+
+### Formula 
+Variable Name | Formula or Definition | Description
+|------------------|--------------------------------|----------------------|
+studentloan_pre | ((Q4_2019 - Q4_2017) / Q4_2017) × 100 | Student loan debt growth rate (Pre-COVID)
+studentloan_post | ((Q4_2022 - Q4_2020) / Q4_2020) × 100 | Student loan debt growth rate (Post-COVID)
+studentloan_delinq_pre | Q4_2019 | Student loan delinquency rate (Pre-COVID)
+studentloan_delinq_post | Q4_2022 | Student loan delinquency rate (Post-COVID)
+
+### Visual
 
 ```{r, warning=FALSE, message=FALSE}
 df %>%
@@ -1022,7 +1091,17 @@ gg_student2 <- ggplot(student_df2, aes(x = Time, y = Change, fill = Time)) +
 grid.arrange(gg_student, gg_student2, ncol = 2)
 ```
 
-## Auto
+## Auto {.tabset}
+
+### Formula
+Variable Name | Formula | Description
+|------------------|--------------------------------|----------------------|
+auto_pre | ((Q4_2019 - Q4_2017) / Q4_2017) × 100 | Auto loan debt growth rate (Pre-COVID)
+auto_post | ((Q4_2022 - Q4_2020) / Q4_2020) × 100 | Auto loan debt growth rate (Post-COVID)
+auto_delinq_pre | Q4_2019 | Auto loan delinquency rate (Pre-COVID)
+auto_delinq_post | Q4_2022 | Auto loan delinquency rate (Post-COVID)
+
+### Visual
 
 ```{r, warning=FALSE, message=FALSE}
 df_auto <- df %>%
@@ -1041,6 +1120,15 @@ ggplot(df_auto, aes(x = Category, y = Value, fill = Category)) +
 ```
 
 # Housing Change Rate Visualizations {.tabset}
+
+## Formula
+
+Variable Name	| Formula | Description
+|------------------|--------------------------------|----------------------|
+zhvi_post_change |	((ZHVI_2022 - ZHVI_2020) / ZHVI_2020) × 100	| Housing price change rate (Post-COVID)
+zhvi_post_avg |	(ZHVI_2020 + ZHVI_2021 + ZHVI_2022) / 3	| Average housing price during post-COVID years
+zhvi_pre_change |	((ZHVI_2019 - ZHVI_2017) / ZHVI_2017) × 100	| Housing price change rate (Pre-COVID)
+zhvi_pre_avg |	(ZHVI_2017 + ZHVI_2018 + ZHVI_2019) / 3	| Average housing price during pre-COVID years
 
 ## Pre (2017–2019)
 
@@ -1088,7 +1176,7 @@ housing_long <- merged_dfLC %>%
     values_to = "change"
   ) %>%
   mutate(
-    period = recode(period,
+    period = dplyr::recode(period,
                     "zhvi_pre_change" = "Pre-COVID (2017–2019)",
                     "zhvi_post_change" = "Post-COVID (2020–2022)")) %>% 
   mutate(period = factor(period, levels = c("Pre-COVID (2017–2019)", "Post-COVID (2020–2022)")))
@@ -1103,4 +1191,295 @@ plot_usmap(data = housing_long, values = "change", regions = "state") +
   ) +
   labs(title = "Housing Price Change: Pre vs. Post COVID") +
   theme(legend.position = "right")
+```
+
+#  Statistic {.tabset}
+
+```{r, warning=FALSE, message=FALSE}
+
+df_stat <- read_csv("data/data-clean/FINAL.csv")
+# df_stat
+```
+## ANOVA {.tabset}
+
+
+| Variable           | ANOVA p-value | Post-Hoc Interpretation                                       | Shapiro p-value | Levene p-value | Equal Variance |
+|--------------------|----------------|----------------------------------------------------------------|------------------|------------------
+| **gdp_post**        | 2.40e-08       | All three groups significantly different from each other     | 0.798            | 0.273            
+| **income_post**     | 0.039          | Low group < Medium & High groups (no difference between Medium & High) | 0.299            | 0.344            
+| **unemp_post**      | 0.122          | No statistically significant differences between groups      | 0.679            | 0.605            
+| **total_post**      | 0.00016        | Differences exist; Post-hoc details required (likely Low vs High) | 0.401            | 0.138            
+| **creditcard_post** | 0.333          | No statistically significant differences between groups      | 0.873            | 0.188            
+
+### Population
+```{r}
+df_stat$pop_group <- cut(df_stat$population_post,
+                    breaks = quantile(df_stat$population_post, probs = c(0, 1/3, 2/3, 1), na.rm = TRUE),
+                    labels = c("Small", "Medium", "Large"),
+                    include.lowest = TRUE)
+
+pop_anova <- aov(zhvi_post_change ~ pop_group, data = df_stat)
+summary(pop_anova)
+
+PostHocTest(pop_anova, method = "lsd")
+
+ggplot(df_stat, aes(x = pop_group, y = zhvi_post_change, fill = pop_group)) +
+  geom_boxplot() +
+  theme_minimal() +
+  labs(title = "Post-COVID Housing Price Change by Population Group",
+       x = "Population Group",
+       y = "zhvi_post_change")
+
+# residual analysis to check the assumptions
+shapiro.test(pop_anova$residuals)  
+
+# Levene's test for homogeneity of variance
+leveneTest(zhvi_post_change ~ factor(pop_group), data = df_stat)
+
+pop_group_table <- df_stat %>%
+  select(State, population_post, zhvi_post_change, pop_group)
+
+
+datatable(pop_group_table,
+          options = list(pageLength = 10, autoWidth = TRUE),
+          caption = "States by Population Group (Small / Medium / Large)")
+```
+
+### Income
+```{r}
+df_stat$income_group <- cut(df_stat$income_post,
+                       breaks = quantile(df_stat$income_post, probs = c(0, 1/3, 2/3, 1), na.rm = TRUE),
+                       labels = c("Low", "Medium", "High"),
+                       include.lowest = TRUE)
+
+income_anova <- aov(zhvi_post_change ~ income_group, data = df_stat)
+summary(income_anova)
+
+PostHocTest(income_anova, method = "lsd")
+
+ggplot(df_stat, aes(x = income_group, y = zhvi_post_change, fill = income_group)) +
+  geom_boxplot() +
+  theme_minimal() +
+  labs(title = "Housing Price Change by Income Group",
+       x = "Income Group",
+       y = "zhvi_post_change")
+
+# residual analysis to check the assumptions
+shapiro.test(income_anova$residuals)  
+
+# Levene's test for homogeneity of variance
+leveneTest(zhvi_post_change ~ factor(income_group), data = df_stat)
+
+income_group_table <- df_stat %>%
+  select(State, income_post, zhvi_post_change, income_group)
+
+datatable(income_group_table,
+          options = list(pageLength = 10, autoWidth = TRUE),
+          caption = "States by Income Group (Low / Medium / High)")
+```
+### GDP
+
+```{r}
+df_stat$gdp_group <- cut(df_stat$gdp_post,
+                         breaks = quantile(df_stat$gdp_post, probs = c(0, 1/3, 2/3, 1), na.rm = TRUE),
+                         labels = c("Low", "Medium", "High"),
+                         include.lowest = TRUE)
+
+gdp_anova <- aov(zhvi_post_change ~ gdp_group, data = df_stat)
+summary(gdp_anova)
+
+PostHocTest(gdp_anova, method = "lsd")
+
+shapiro.test(gdp_anova$residuals)
+
+leveneTest(zhvi_post_change ~ factor(gdp_group), data = df_stat)
+
+ggplot(df_stat, aes(x = gdp_group, y = zhvi_post_change, fill = gdp_group)) +
+  geom_boxplot() +
+  theme_minimal() +
+  labs(title = "Housing Price Change by GDP Group",
+       x = "GDP Group",
+       y = "zhvi_post_change")
+
+gdp_group_table <- df_stat %>%
+  select(State, gdp_post, zhvi_post_change, gdp_group)
+
+datatable(gdp_group_table,
+          options = list(pageLength = 10, autoWidth = TRUE),
+          caption = "States by GDP Group (Low / Medium / High)")
+```
+
+### Unemployment
+
+```{r}
+df_stat$unemp_group <- cut(df_stat$unemp_post,
+                           breaks = quantile(df_stat$unemp_post, probs = c(0, 1/3, 2/3, 1), na.rm = TRUE),
+                           labels = c("Low", "Medium", "High"),
+                           include.lowest = TRUE)
+
+unemp_anova <- aov(zhvi_post_change ~ unemp_group, data = df_stat)
+summary(unemp_anova)
+
+PostHocTest(unemp_anova, method = "lsd")
+shapiro.test(unemp_anova$residuals)
+leveneTest(zhvi_post_change ~ factor(unemp_group), data = df_stat)
+
+ggplot(df_stat, aes(x = unemp_group, y = zhvi_post_change, fill = unemp_group)) +
+  geom_boxplot() +
+  theme_minimal() +
+  labs(title = "Housing Price Change by Unemployment Group",
+       x = "Unemployment Group",
+       y = "zhvi_post_change")
+
+unemp_group_table <- df_stat %>%
+  select(State, unemp_post, zhvi_post_change, unemp_group)
+
+datatable(unemp_group_table,
+          options = list(pageLength = 10, autoWidth = TRUE),
+          caption = "States by Unemployment Group (Low / Medium / High)")
+```
+
+### Total Dept
+```{r}
+df_stat$total_group <- cut(df_stat$total_post,
+                           breaks = quantile(df_stat$total_post, probs = c(0, 1/3, 2/3, 1), na.rm = TRUE),
+                           labels = c("Low", "Medium", "High"),
+                           include.lowest = TRUE)
+
+total_anova <- aov(zhvi_post_change ~ total_group, data = df_stat)
+summary(total_anova)
+
+PostHocTest(total_anova, method = "lsd")
+shapiro.test(total_anova$residuals)
+leveneTest(zhvi_post_change ~ factor(total_group), data = df_stat)
+
+ggplot(df_stat, aes(x = total_group, y = zhvi_post_change, fill = total_group)) +
+  geom_boxplot() +
+  theme_minimal() +
+  labs(title = "Housing Price Change by Total Debt Group",
+       x = "Total Debt Group",
+       y = "zhvi_post_change")
+
+total_group_table <- df_stat %>%
+  select(State, total_post, zhvi_post_change, total_group)
+
+datatable(total_group_table,
+          options = list(pageLength = 10, autoWidth = TRUE),
+          caption = "States by Total Debt Group (Low / Medium / High)")
+```
+
+### Credit Card
+```{r}
+df_stat$creditcard_group <- cut(df_stat$creditcard_post,
+                                breaks = quantile(df_stat$creditcard_post, probs = c(0, 1/3, 2/3, 1), na.rm = TRUE),
+                                labels = c("Low", "Medium", "High"),
+                                include.lowest = TRUE)
+
+creditcard_anova <- aov(zhvi_post_change ~ creditcard_group, data = df_stat)
+summary(creditcard_anova)
+
+PostHocTest(creditcard_anova, method = "lsd")
+shapiro.test(creditcard_anova$residuals)
+leveneTest(zhvi_post_change ~ factor(creditcard_group), data = df_stat)
+
+ggplot(df_stat, aes(x = creditcard_group, y = zhvi_post_change, fill = creditcard_group)) +
+  geom_boxplot() +
+  theme_minimal() +
+  labs(title = "Housing Price Change by Credit Card Debt Group",
+       x = "Credit Card Debt Group",
+       y = "zhvi_post_change")
+
+credit_group_table <- df_stat %>%
+  select(State, creditcard_post, zhvi_post_change, creditcard_group)
+
+datatable(credit_group_table,
+          options = list(pageLength = 10, autoWidth = TRUE),
+          caption = "States by Credit Card Debt Group (Low / Medium / High)")
+```
+
+
+## Decision Tree
+```{r}
+tree_model <- rpart(zhvi_post_change ~ zhvi_post_avg + population_post + gdp_post + income_post + unemp_post + total_post + creditcard_post
+                    ,data = df_stat
+                    ,method = "anova"
+                    ,control = rpart.control(cp = 0.0001,minsplit = 10, minbucket = 4)) # it's not class because our house price is 
+
+rpart.plot(tree_model,
+           extra = 101,      
+           fallen.leaves = TRUE,
+           main = "Decision Tree")
+
+tree_model$variable.importance
+
+node_assignments <- tree_model$where
+
+tree_nodes <- data.frame(State = df_stat$State, Node = node_assignments)
+
+#tree_nodes
+datatable(tree_nodes, 
+          filter = "top",
+          caption = "state")
+```
+
+## Clustering
+
+### 6 vars
+```{r}
+clusters <- c("population_post", "gdp_post", "income_post", "unemp_post", "total_post", "zhvi_post_avg")
+cluster_z <- scale(df_stat[, clusters] )
+
+set.seed(612)
+kmeans <- kmeans(cluster_z, centers = 5)
+
+#kmeans
+
+df_stat$cluster <- as.factor(kmeans$cluster)
+
+ggplot(df_stat, aes(x = cluster, y = zhvi_post_change, fill = cluster)) +
+  geom_boxplot() +
+  theme_minimal() +
+  labs(title = "Cluster for Post COVID",
+       x = "Cluster Group",
+       y = "zhvi_post_change")
+
+cluster_nodes <- data.frame(State = df_stat$State, Cluster = df_stat$cluster)
+
+#cluster_nodes
+split(cluster_nodes$State, cluster_nodes$Cluster)
+```
+
+```{r}
+cluster_summary <- aggregate(df_stat[, clusters], by = list(Cluster = df_stat$cluster), FUN = mean)
+cluster_summary[ , -1] <- round(cluster_summary[ , -1], 2)
+print(cluster_summary)
+```
+
+### 4 vars
+
+```{r}
+clusters2 <- c("population_post", "income_post", "total_post", "zhvi_post_avg")
+cluster_z2 <- scale(df_stat[, clusters2])
+
+set.seed(612)
+kmeans2 <- kmeans(cluster_z2, centers = 6)
+df_stat$cluster2 <- as.factor(kmeans2$cluster)
+
+ggplot(df_stat, aes(x = cluster2, y = zhvi_post_change, fill = cluster2)) +
+  geom_boxplot() +
+  theme_minimal() +
+  labs(title = "Clustering: GDP + Income + Population",
+       x = "Cluster",
+       y = "Housing Price Change (%)")
+```
+
+```{r}
+cluster_nodes2 <- data.frame(State = df_stat$State, Cluster = df_stat$cluster2)
+split(cluster_nodes2$State, cluster_nodes2$Cluster)
+```
+
+```{r}
+cluster_summary2 <- aggregate(df_stat[, clusters2], by = list(Cluster = df_stat$cluster2), FUN = mean)
+cluster_summary2[ , -1] <- round(cluster_summary2[ , -1], 2)
+print(cluster_summary2)
 ```
