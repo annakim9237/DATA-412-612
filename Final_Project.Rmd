@@ -1206,11 +1206,14 @@ plot_usmap(data = housing_long, values = "change", regions = "state") +
 
 ```{r, warning=FALSE, message=FALSE}
 housing_summary <- clean_housing %>%
-  select(State, zhvi_pre_avg, zhvi_post_avg)
+  select(State, zhvi_pre_change, zhvi_post_change)
 
 # Run paired t-test 
-t_test_result <- t.test(housing_summary$zhvi_post_avg, housing_summary$zhvi_pre_avg, 
+t_test_result <- t.test(housing_summary$zhvi_post_change, housing_summary$zhvi_pre_change, 
                         paired = TRUE, alternative = "two.sided")
+
+
+shapiro.test(housing_summary$zhvi_pre_change - housing_summary$zhvi_post_change )
 
 t_test_result
 ```
@@ -1225,6 +1228,7 @@ mortgage_summary <- merged_df %>%
 t_test_result2 <- t.test(merged_df$mortgage_post,merged_df$mortgage_pre, 
                         paired = TRUE, alternative = "two.sided")
 
+shapiro.test(merged_df$mortgage_post - merged_df$mortgage_pre)
 t_test_result2
 ```
 
@@ -1237,6 +1241,8 @@ income_summary <- merged_df %>%
 # Run paired t-test 
 t_test_result3 <- t.test(merged_df$income_post,merged_df$income_pre, 
                         paired = TRUE, alternative = "two.sided")
+
+shapiro.test(merged_df$income_post - merged_df$income_pre)
 
 t_test_result3
 ```
@@ -1298,6 +1304,10 @@ ggplot(merged_df, aes(x = income_pre, y = income_post)) +
 
 ## Multiple Linear Regression {.tabset}
 
+### ZHVI model 1 (pre)
+
+### ZHVI model 2 (Post)
+
 ### ZHVI model 1
 
 ```{r, warning=FALSE, message=FALSE}
@@ -1317,6 +1327,8 @@ model_multiple <- lm(zhvi_post_avg ~ zhvi_pre_avg + gdp_post + population_post, 
 # View summary
 summary(model_multiple)
 ```
+
+
 
 ```{r, warning=FALSE, message=FALSE}
 

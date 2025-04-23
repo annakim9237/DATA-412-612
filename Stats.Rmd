@@ -19,10 +19,10 @@ clean_housing<- read_csv("data/data-clean/HOUSING.csv")
 # Statistics
 
 ```{r}
-merged_df
+#merged_df
 ```
 
-## paired t-test
+## paired t-test  {.tabset}
 
 ### ZHVI
 
@@ -64,7 +64,7 @@ t_test_result3 <- t.test(merged_df$income_post,merged_df$income_pre,
 t_test_result3
 ```
 
-## Correlation
+## Correlation  {.tabset}
 
 ### ZHVI
 
@@ -119,13 +119,23 @@ ggplot(merged_df, aes(x = income_pre, y = income_post)) +
   theme_minimal()
 ```
 
-## Multiple linear regression
+## Multiple linear regression {.tabset}
 
-### ZHVI
+### ZHVI model 1
 
 ```{r}
 # Multiple linear regression model
 model_multiple <- lm(zhvi_post_avg ~ zhvi_pre_avg + gdp_post + income_post + population_post, data = merged_df)
+
+# View summary
+summary(model_multiple)
+```
+
+### ZHVI model 2
+
+```{r}
+# Multiple linear regression model
+model_multiple <- lm(zhvi_post_avg ~ zhvi_pre_avg + gdp_post + population_post, data = merged_df)
 
 # View summary
 summary(model_multiple)
