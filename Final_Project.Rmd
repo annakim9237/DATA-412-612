@@ -698,7 +698,7 @@ covidstates %>%
   theme_minimal()
 ```
 
-## COVID US Map
+## COVID US Map (New)
 
 ```{r, warning=FALSE, message=FALSE}
 
@@ -1248,7 +1248,7 @@ ggplot(df_auto, aes(x = Category, y = Value, fill = Category)) +
   theme(axis.text.x = element_text(angle = 20, hjust = 1), legend.position = "bottom")
 ```
 
-# Housing Change Rate Visualizations {.tabset}
+# Housing Change Rate Visualizations (New) {.tabset}
 
 ## Formula
 
@@ -1322,7 +1322,7 @@ plot_usmap(data = housing_long, values = "change", regions = "state") +
   theme(legend.position = "right")
 ```
 
-#  Statistic {.tabset}
+#  Statistic (New) {.tabset}
 
 ## Paired t-test  {.tabset}
 
@@ -1757,7 +1757,7 @@ datatable(tree_nodes,
           caption = "state")
 ```
 
-## Clustering {.tabset}
+## Clustering{.tabset}
 
 ### 6 vars
 ```{r}
