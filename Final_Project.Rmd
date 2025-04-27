@@ -50,7 +50,7 @@ library(rpart.plot)
 
 ## Introduction
 
-This project is to explore how the COVID-19 pandemic affected economic conditions, focusing on housing price across U.S. states. Although the final goal is to analyze which factors contributed to post-COVID changes in housing prices, it also contains essential works: collecting, cleaning, visualizing and statistical analysis.
+This project explores how the COVID-19 pandemic affected economic conditions, focusing on housing price across U.S. states. Although the final goal is to analyze which factors contributed to post-COVID changes in housing prices, it also contains essential works: collecting, cleaning, visualizing and statistical analysis.
 
 ## Data Sources
 
@@ -118,10 +118,10 @@ Includes per capita credit card debt and total household debt across states. Use
 Source: New York Fed (<https://www.newyorkfed.org/microeconomics/databank.html>) File name: area_report_by_year.xlsx → NYFED.csv
 
 # DATA CLEANING {.tabset}
+To better evaluate the changes in economic factors, we examine a three-year span before (2017–2019) and after (2020–2022) the pandemic for each variable.
 
 ## COVID Cases US
-
-This code chunk is for cleaning COVID case.
+This section of code cleans COVID case data for the country
 ```{r,warning=FALSE, message=FALSE}
 covid <- read_csv("data/cases_deaths.csv")
 #View(covid)
@@ -144,8 +144,7 @@ covid_US
 ```
 
 ## COVID Cases per State
-
-This chunk is for cleaning COVID case per state
+This code cleans COVID case data per state
 ```{r, warning=FALSE, message=FALSE}
 covidbystate <-read_csv("data/covid_confirmed_usafacts.csv")
 
@@ -168,10 +167,10 @@ covidstates <- covidStatesDaily %>%
   group_by(State, year) %>%
   summarise(total_cases = max(cases, na.rm = TRUE), .groups = "drop")
 
-#covidstates
+covidstates
 ```
 
-This chunk is to make the states categories
+This chunk creates the new variable "severity" to organize the number of each states' cases using summary statistics. 
 ```{r, warning=FALSE, message=FALSE}
 case_summary <- summary(covidstates$total_cases)
 #case_summary
@@ -226,7 +225,7 @@ house2 <- house_avg %>%
 #house2
 ```
 
-This chunk is to calculate the formula
+This chunk is to calculate the formula for the rate of change
 ```{r, warning=FALSE, message=FALSE}
 
 house3 <- house2 %>%
@@ -595,7 +594,7 @@ head(NYFED_df)
 
 ## Final Data Join
 
-This chunk is to join every data
+This chunk is to join all the economic data
 ```{r, warning=FALSE, message=FALSE}
 clean_gdp <- read_csv("data/data-clean/GDP.csv")
 clean_income <- read_csv("data/data-clean/INCOME.csv")
@@ -649,7 +648,7 @@ merged_df
 
 # COVID Mapping Visualization (EDA) {.tabset}
 
-This chunk is to read final version data set
+This section creates visualizations for the COVID by State dataset
 
 ```{r, warning=FALSE, message=FALSE}
 df<- read_csv("data/data-clean/FINAL.csv")
@@ -660,14 +659,8 @@ df<- read_csv("data/data-clean/FINAL.csv")
 ## COVID distribution  {.tabset}
 
 ### Severity
+This chunk visualizes the division of severity levels to help determine the distribution of total cases in the US.
 ```{r, warning=FALSE, message=FALSE}
-#ggplot(covidstates, aes(x = severity, fill = severity)) +
-#  geom_bar() +
-#  labs(title = "Number of States by COVID Severity Level",
-#       x = "Severity Level", y = "Number of States") +
-#  scale_fill_manual(values = c("Very low" = "lightgreen", "Low" = "yellow", "Medium" = "orange", "High" = #"red", "Very high" = "brown")) +
-#  theme_minimal()
-
 ggplot(covidstates, aes(x = severity, y = total_cases, fill = severity)) +
   geom_boxplot() +
   labs(title = "Distribution of Total Cases by Severity Level",
@@ -676,6 +669,7 @@ ggplot(covidstates, aes(x = severity, y = total_cases, fill = severity)) +
 ```
 
 ### By year (2020-2023)
+This chunk describes the severity levels by each year in the US, showing the trend of increasing severity.
 ```{r, warning=FALSE, message=FALSE}
 covidstates %>%
   ggplot(aes(x = year, fill = severity)) +
@@ -687,7 +681,7 @@ covidstates %>%
 ```
 
 ## 6 States
-
+This code shows the increasing trend of COVID cases over the course of 3 years in 6 major US states.
 ```{r, warning=FALSE, message=FALSE}
 covidstates %>%
   filter(State %in% c("CA", "TX", "NY", "IL", "AZ", "FL")) %>%
@@ -699,7 +693,7 @@ covidstates %>%
 ```
 
 ## COVID US Map (New)
-
+This map shows how COVID severity levels have increased across U.S. states from 2020 to 2023.
 ```{r, warning=FALSE, message=FALSE}
 
 state_abbreviations <- data.frame(
@@ -717,20 +711,25 @@ covidstatesFULLNAME <- covidstates %>%
 us_states <- map_data("state")
 us_states$region <- tolower(us_states$region) 
 
-# Merge the map data with the COVID data
+# Merging the map data with the COVID data
 covid_map_data <- us_states %>%
   left_join(covidstatesFULLNAME, by = c("region" = "State")) %>%
-  filter(!is.na(severity))
+  filter(!is.na(severity), year %in% c(2020, 2021, 2022, 2023))
 
 
 ggplot(covid_map_data, aes(x = long, y = lat, group = group, fill = severity)) +
   geom_polygon(color = "black") +
   coord_fixed(1.1) +
+  facet_wrap(~ year, ncol = 2) +
   labs(title = "COVID Case Severity by State",
        fill = "Severity") +
   scale_fill_manual(values = c("Very low" = "lightgreen", "Low" = "yellow", "Medium" = "orange", "High" = "red", "Very high"= "brown")) +
-  theme_void() +
-  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+  theme_void(base_size = 14) +
+  theme(
+    strip.text = element_text(size = 12, face = "bold"),
+    plot.title = element_text(size = 16, hjust = 0.5),
+    legend.position = "bottom"
+  )
 
 # covidstatesFULLNAME
 # covidstates
@@ -741,6 +740,7 @@ ggplot(covid_map_data, aes(x = long, y = lat, group = group, fill = severity)) +
 ## Population {.tabset}
 
 ### Formula
+This formula converts the population value into a rate of change for better analysis.
 
 Variable Name | Formula | Description
 |------------------|--------------------------------|----------------------|
@@ -748,7 +748,7 @@ population_pre | ((Population_2019 - Population_2017) / Population_2017) × 100 
 population_post | ((Population_2022 - Population_2020) / Population_2020) × 100 | Population growth rate (Post-COVID)
 
 ### Pre (2017–2019)
-
+This heat map shows the rate of change for population in the US by state before the pandemic.
 ```{r, warning=FALSE, message=FALSE}
 
 merged_dfLC <- merged_df %>%
@@ -766,7 +766,7 @@ plot_usmap(data = merged_dfLC, values = "population_pre", regions = "state") +
 ```
 
 ### Post (2020–2022)
-
+This heat map shows the rate of change for population in the US by state after the pandemic.
 ```{r, warning=FALSE, message=FALSE}
 
 ## POST covid populations
@@ -781,7 +781,7 @@ plot_usmap(data = merged_dfLC, values = "population_post", regions = "state") +
 ```
 
 ### Comparison
-
+This side-by-side map view of pre- and post-pandemic population rates suggest that population has remained steady before and after COVID.
 ```{r, warning=FALSE, message=FALSE}
 ###  pre and post side by side
 population_long <- merged_dfLC %>%
@@ -812,6 +812,7 @@ plot_usmap(data = population_long, values = "population", regions = "state") +
 ## GDP {.tabset}
 
 ### Formula
+This formula converts the GDP value into a rate of change for better analysis.
 
 Variable Name | Formula  | Description
 |------------------|--------------------------------|----------------------| 
@@ -848,6 +849,7 @@ df %>%
 ## Income {.tabset}
 
 ### Formula
+This formula converts the income value into a rate of change for better analysis.
 
 Variable Name | Formula  | Description
 |------------------|--------------------------------|----------------------| 
@@ -886,6 +888,8 @@ df %>%
 ## PCE {.tabset}
 
 ### Formula
+This formula converts the personal consumption expenditure value into a rate of change for better analysis.
+
 
 Variable Name | Formula  | Description
 |------------------|--------------------------------|----------------------| 
@@ -1251,6 +1255,7 @@ ggplot(df_auto, aes(x = Category, y = Value, fill = Category)) +
 # Housing Change Rate Visualizations (New) {.tabset}
 
 ## Formula
+This formula converts the Zillow Home Value Index into a an average value as well as a rate of change for both pre- and post-pandemic. We use the change rate in order to conduct better analysis and to minimize the effect of general changes in price levels, further proving the effects of COVID.
 
 Variable Name	| Formula | Description
 |------------------|--------------------------------|----------------------|
@@ -1260,7 +1265,7 @@ zhvi_pre_change |	((ZHVI_2019 - ZHVI_2017) / ZHVI_2017) × 100	| Housing price c
 zhvi_pre_avg |	(ZHVI_2017 + ZHVI_2018 + ZHVI_2019) / 3	| Average housing price during pre-COVID years
 
 ## Pre (2017–2019)
-
+This heat map shows the rate of change for housing prices in the US by state before the pandemic.
 ```{r, warning=FALSE, message=FALSE}
 merged_dfLC <- merged_df %>%
   rename(state = State)
@@ -1277,7 +1282,7 @@ plot_usmap(data = merged_dfLC, values = "zhvi_pre_change", regions = "state") +
 ```
 
 ## Post (2020–2022)
-
+This heat map shows the rate of change for housing prices in the US by state after the pandemic.
 ```{r, warning=FALSE, message=FALSE}
 
 ## heat map for POST covid housing change rate
@@ -1292,7 +1297,7 @@ plot_usmap(data = merged_dfLC, values = "zhvi_post_change", regions = "state") +
 ```
 
 ## Comparison
-
+This side-by-side map view of pre- and post-pandemic housing prices suggest that COVID has caused a significant shift in housing prices in the US. Pre-pandemic home prices typically changed by 5-15% annually but post-pandemic home prices have changed by 25-35%. By evaluating the change rate, we are minimizing the effects of inflation and general increases to home value.
 ```{r, warning=FALSE, message=FALSE}
 
 ### both pre and post, side by side
@@ -1327,7 +1332,7 @@ plot_usmap(data = housing_long, values = "change", regions = "state") +
 ## Paired t-test  {.tabset}
 
 ### ZHVI
-
+This chunk conducts a paired t-test to determine if the average rate of change in housing prices differ after COVID. A Shapiro-Wilk test confirmed that the differences were approximately normally distributed (W = 0.9867, p-value = 0.8337), validating the assumptions of the t-test. The paired t-test results showed a highly significant difference suggesting that COVID had a major impact on raising housing prices across states
 ```{r, warning=FALSE, message=FALSE}
 housing_summary <- clean_housing %>%
   select(State, zhvi_pre_change, zhvi_post_change)
@@ -1343,6 +1348,7 @@ t_test_result
 ```
 
 ### Mortgage
+This chunk conducts a paired t-test to determine if there was a difference in mortgage rates after COVID. The Shapiro-Wilk test confirmed that the differences between pre- and post-pandemic mortgage rates were normally distributed (W = 0.97102, p-value = 0.2437), which supports the t-test. The paired t-test revealed a significant difference (t = 25.871, p-value < 2.2e-16)  suggesting that COVID-19 had a  effect on increasing mortgage rates.
 
 ```{r, warning=FALSE, message=FALSE}
 mortgage_summary <- merged_df %>%
@@ -1357,6 +1363,7 @@ t_test_result2
 ```
 
 ### Income
+This chunk performs a paired t-test to assess difference in income after COVID. The Shapiro-Wilk test confirmed that the differences were approximately normally distributed (W = 0.96408, p-value = 0.1245). The paired t-test results showed a significant difference (t = 10.794, p-value = 1.156e-14) suggesting that there was a rise in income levels across states.
 
 ```{r, warning=FALSE, message=FALSE}
 income_summary <- merged_df %>%
@@ -1374,6 +1381,7 @@ t_test_result3
 ## Correlation  {.tabset}
 
 ### ZHVI
+This assesses the correlation between pre- and post-pandemic housing prices using Pearson's correlation test. The results showed a very strong positive correlation. 
 
 ```{r, warning=FALSE, message=FALSE}
 # Correlation between housing prices pre and post
@@ -1393,6 +1401,7 @@ ggplot(merged_df, aes(x = zhvi_pre_avg, y = zhvi_post_avg)) +
 ```
 
 ### Mortgage
+This examines the correlation between pre- and post-pandemic mortgage rates. The Pearson correlation coefficient was 0.6335, suggesting a moderate positive relationship. Although strong, this relationship is weaker compared to housing prices.
 
 ```{r, warning=FALSE, message=FALSE}
 cor_mort <- cor.test(merged_df$mortgage_pre, merged_df$mortgage_post, method = "pearson")
@@ -1410,6 +1419,7 @@ ggplot(merged_df, aes(x = mortgage_pre, y = mortgage_post)) +
 ```
 
 ### Income
+This examines the correlation between pre- and post-pandemic income levels across states. The Pearson correlation coefficient was 0.3185, suggesting a weak to moderte positive correlation. 
 
 ```{r, warning=FALSE, message=FALSE}
 cor_income <- cor.test(merged_df$income_pre, merged_df$income_post, method = "pearson")
@@ -1463,9 +1473,9 @@ This chunk is showing process of step function
 model_step1 <- step(model_full1, direction = "both", trace = TRUE)
 ```
 
-Population (ignificant): More people → Higher house price change
+Population (significant): More people → Higher house price change
 
-Mortgage delinquency (ignificant): More mortgage trouble → Lower prices
+Mortgage delinquency (significant): More mortgage trouble → Lower prices
 
 Student loan delinquency: Slight positive effect, but not clear
 
