@@ -1547,6 +1547,8 @@ df_stat <- read_csv("data/data-clean/FINAL.csv")
 
 ## ANOVA {.tabset}
 
+In the ANOVA analysis, gdp_post, income_post, and total_post showed statistically significant differences across groups. gdp_post had strong differences between all three groups, while income_post showed that the low group differed from the medium and high groups. unemp_post and creditcard_post did not show significant group differences.
+
 
 | Variable           | ANOVA p-value | Post-Hoc Interpretation                                       | Shapiro p-value | Levene p-value | Equal Variance |
 |--------------------|----------------|----------------------------------------------------------------|------------------|------------------
@@ -1557,6 +1559,9 @@ df_stat <- read_csv("data/data-clean/FINAL.csv")
 | **creditcard_post** | 0.333          | No statistically significant differences between groups      | 0.873            | 0.188            
 
 ### Population
+
+For example, states classified in the "Large" population group, such as Florida, Arizona, and Georgia, showed significantly higher housing price changes compared to states with smaller populations. This suggests that states with larger populations experienced a stronger housing market recovery after COVID.
+
 ```{r}
 df_stat$pop_group <- cut(df_stat$population_post,
                     breaks = quantile(df_stat$population_post, probs = c(0, 1/3, 2/3, 1), na.rm = TRUE),
@@ -1591,6 +1596,9 @@ datatable(pop_group_table,
 ```
 
 ### Income
+
+In the ANOVA analysis by income group, states categorized as "High" income, such as Colorado, Delaware, and Nevada, showed significantly different housing price changes compared to states in the "Low" income group. However, there was no significant difference between the "High" and "Medium" income groups. This indicates that housing market responses to COVID varied more notably between low and higher-income states.
+
 ```{r}
 df_stat$income_group <- cut(df_stat$income_post,
                        breaks = quantile(df_stat$income_post, probs = c(0, 1/3, 2/3, 1), na.rm = TRUE),
@@ -1624,6 +1632,8 @@ datatable(income_group_table,
 ```
 ### GDP
 
+In the ANOVA analysis by GDP group, states categorized as "High" GDP, such as Florida, Arizona, and Nevada, showed significantly different housing price changes compared to those in the "Low" GDP group. Moreover, significant differences were also observed between the "Medium" and "High" GDP groups, highlighting the strong economic influence on post-COVID housing market trends.
+
 ```{r}
 df_stat$gdp_group <- cut(df_stat$gdp_post,
                          breaks = quantile(df_stat$gdp_post, probs = c(0, 1/3, 2/3, 1), na.rm = TRUE),
@@ -1656,6 +1666,8 @@ datatable(gdp_group_table,
 
 ### Unemployment
 
+In the ANOVA analysis by unemployment group, the overall difference in housing price changes was not statistically significant (p = 0.122). However, post-hoc results showed that states in the "High" unemployment group, such as Arkansas, Delaware, and Georgia, had significantly different housing price changes compared to those in the "Low" unemployment group (p = 0.0441). This suggests some localized differences, even though the overall group effect was not strong.
+
 ```{r}
 df_stat$unemp_group <- cut(df_stat$unemp_post,
                            breaks = quantile(df_stat$unemp_post, probs = c(0, 1/3, 2/3, 1), na.rm = TRUE),
@@ -1685,6 +1697,9 @@ datatable(unemp_group_table,
 ```
 
 ### Total Dept
+
+In the ANOVA analysis by total debt group, the differences in housing price changes were statistically significant (p = 0.000157). States classified in the "High" total debt group, such as Arizona, California, and Florida, experienced significantly different housing market trends compared to those in the "Low" and "Medium" groups. However, the Shapiro-Wilk test indicated a slight deviation from normality (p = 0.01876), suggesting that results should be interpreted with some caution.
+
 ```{r}
 df_stat$total_group <- cut(df_stat$total_post,
                            breaks = quantile(df_stat$total_post, probs = c(0, 1/3, 2/3, 1), na.rm = TRUE),
@@ -1714,6 +1729,10 @@ datatable(total_group_table,
 ```
 
 ### Credit Card
+
+In the ANOVA analysis by credit card debt group, there was no statistically significant difference in housing price changes across the groups (p = 0.333). Similarly, post-hoc tests revealed no meaningful pairwise differences. States with high credit card debt levels, such as California, Colorado, and Florida, did not show significantly different housing market trends compared to states with lower debt levels.
+
+
 ```{r}
 df_stat$creditcard_group <- cut(df_stat$creditcard_post,
                                 breaks = quantile(df_stat$creditcard_post, probs = c(0, 1/3, 2/3, 1), na.rm = TRUE),
@@ -1744,6 +1763,9 @@ datatable(credit_group_table,
 
 
 ## Decision Tree
+
+The decision tree highlights gdp_post as the most important variable for splitting the data, followed by population_post, creditcard_post, total_post, and income_post. The tree structure shows how these variables help predict the housing market trends after COVID, with gdp_post being the primary factor.
+
 ```{r}
 tree_model <- rpart(zhvi_post_change ~ zhvi_post_avg + population_post + gdp_post + income_post + unemp_post + total_post + creditcard_post
                     ,data = df_stat
@@ -1769,7 +1791,12 @@ datatable(tree_nodes,
 
 ## Clustering{.tabset}
 
+In the clustering analysis based on GDP, Income, and Population, six distinct clusters and four distinct clusters were identified. Each cluster shows different distributions of housing price changes, suggesting that states with similar economic and demographic profiles experienced similar patterns in housing market shifts.
+
 ### 6 vars
+
+In the clustering analysis, five distinct groups were identified. For example, Cluster 4, which includes states like Florida, Arizona, and Texas, experienced the highest increase in housing prices. In contrast, Cluster 5, with states such as Arkansas, Delaware, and Iowa, showed more moderate price changes. This clustering highlights regional patterns in how different areas' housing markets responded to the pandemic.
+
 ```{r}
 clusters <- c("population_post", "gdp_post", "income_post", "unemp_post", "total_post", "zhvi_post_avg")
 cluster_z <- scale(df_stat[, clusters] )
@@ -1801,6 +1828,8 @@ print(cluster_summary)
 ```
 
 ### 4 vars
+
+Through clustering analysis based on GDP, income, and population, average housing price after COVID, six distinct groups of states were identified. Cluster 5, which includes California, Washington, D.C., and Hawaii, showed the highest average housing prices. Meanwhile, Cluster 1, containing states like Arkansas, Iowa, and Nebraska, exhibited relatively lower housing prices and economic indicators. These results reveal how economic differences across regions can influence patterns in the housing market.
 
 ```{r}
 clusters2 <- c("population_post", "income_post", "total_post", "zhvi_post_avg")

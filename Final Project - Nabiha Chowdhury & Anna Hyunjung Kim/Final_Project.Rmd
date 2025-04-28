@@ -1,0 +1,1859 @@
+---
+title: "How COVID affected the Economy"
+author: "Nabiha Chowdhury & Anna Hyunjung Kim"
+date: "`r Sys.Date()`"
+output: 
+  html_document:
+        toc: true조
+        toc_float: true
+        number_sections: true
+        code_folding: hide
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r, message=FALSE, warning=FALSE}
+library(readxl)
+library(dplyr)
+library(tidyr)
+library(stringr)
+
+library(tidyverse)
+library(DT)
+library(patchwork)
+library(ggthemes)
+library(plotly)
+library(gapminder)
+library(grid)
+library(ggplot2)
+library(gridExtra)
+
+library(maps)
+library(usmap)
+
+# install.packages("DescTools")
+# install.packages("car")
+# install.packages("rpart")
+# install.packages("rpart.plot")
+
+library(DescTools)
+library(car)
+library(rpart)
+library(rpart.plot)
+```
+
+# Title {#Top}
+
+**Exploring the Impact of COVID-19 on State-Level Economic Indicators and housing price in the U.S**
+
+## Introduction
+
+This project explores how the COVID-19 pandemic affected economic conditions, focusing on housing price across U.S. states. Although the final goal is to analyze which factors contributed to post-COVID changes in housing prices, it also contains essential works: collecting, cleaning, visualizing and statistical analysis.
+
+## Data Sources
+
+-   ***COVID***
+
+Includes two datasets: one providing nationwide annual COVID case totals and another offering state-by-state case counts from 2020 to 2023. These datasets help track the spread and intensity of the pandemic across different regions and time periods, offering important context for analyzing trends.
+
+Source: Centers for Disease Control and Prevention (CDC) (<https://covid.cdc.gov/COVID-DATA-TRACKER/#datatracker-home>) & USA Facts (<https://usafacts.org/visualizations/coronavirus-covid-19-spread-map/>)
+
+File name: cases_deaths.csv & covid_confirmed_usafacts.csv
+
+-   ***Zillow Home Value Index (ZHVI)***
+
+A measure of the typical home value and market changes across a given region and housing type. It reflects the typical value for homes in the 35th to 65th percentile range. Available as a smoothed, seasonally adjusted measure and as a raw measure.
+
+Source: Zillow Research (<https://www.zillow.com/research/data/>)
+
+File name: State_zhvi_uc_sfrcondo_tier_0.33_0.67_sm_sa_month.csv
+
+-   ***State unemployment rates over the last 10 years, seasonally adjusted***
+
+This dataset shows monthly unemployment rates by U.S. state. It is part of the Local Area Unemployment Statistics (LAUS) program by the Bureau of Labor Statistics (BLS). The data is seasonally adjusted and helps track labor market trends at the state level over time.
+
+Source :U.S. Bureau of Labor Statistics (<https://www.bls.gov/charts/state-employment-and-unemployment/state-unemployment-rates-animated.htm>)
+
+File name: unemployment rate.xlxs
+
+-   ***Personal Consumption Expenditures (PCE)***
+
+Reports annual state-level PCE data, measuring average household spending across different regions.
+
+Source: Bureau of Economic Analysis (BEA) (<https://apps.bea.gov/regional/downloadzip.htm>)
+
+File name: SAPCE1\_\_ALL_AREAS_1997_2023.csv
+
+-   ***Annual Personal Income***
+
+Includes annual personal income per capita by state. Useful for assessing economic status and regional income disparities. Source: Bureau of Economic Analysis (BEA) File name: SAINC1\_\_ALL_AREAS_1929_2024.csv → INCOME.csv
+
+-   ***Gross Domestic Product (GDP)***
+
+Provides real GDP data by state from 1997 to 2024. This helps analyze economic output and growth across regions.
+
+Source: Bureau of Economic Analysis (BEA)
+
+File name: SAGDP1\_\_ALL_AREAS_1997_2024.csv
+
+-   ***State Level population and Household Debt Statistics***
+
+Includes per capita credit card debt and total household debt across states. Used to assess consumer financial health.
+
+| Sheet | Title |
+|---------------------|---------------------------------------------------|
+| population | Number of Consumers in New York Fed Consumer Credit Panel |
+| auto loan | Auto Debt Balance per Capita |
+| credit card | Credit Card Debt Balance per Capita |
+| mortgage | Mortgage Debt Balance per Capita (excluding HELOC) |
+| student loan | Student Loan Debt Balance per Capita |
+| total | Total Debt Balance per Capita |
+| auto loan delinquency | Percent of Auto Debt Balance 90+ Days Delinquent |
+| credit card delinquency | Percent of Credit Card Debt Balance 90+ Days Delinquent |
+| mortgage delinquency | Percent of Mortgage Debt Balance 90+ Days Delinquent |
+| student loan delinquency | Percent of Student Loan Debt Balance 90+ Days Delinquent (and in default) |
+
+Source: New York Fed (<https://www.newyorkfed.org/microeconomics/databank.html>) File name: area_report_by_year.xlsx → NYFED.csv
+
+# DATA CLEANING {.tabset}
+To better evaluate the changes in economic factors, we examine a three-year span before (2017–2019) and after (2020–2022) the pandemic for each variable.
+
+## COVID Cases US
+This section of code cleans COVID case data for the country
+```{r,warning=FALSE, message=FALSE}
+covid <- read_csv("data/cases_deaths.csv")
+#View(covid)
+
+covid_US <- covid %>% 
+  filter(country == "United States") %>% 
+  select(country, date, new_cases, total_cases, weekly_cases) %>%
+  mutate(date = as.Date(date)) %>%
+  mutate(year = year(date), month = month(date, label = TRUE, abbr = FALSE)) %>%
+  group_by(year, month) %>%
+  summarise(
+    monthly_new_cases = sum(new_cases, na.rm = TRUE),
+    latest_total_cases = max(total_cases, na.rm = TRUE),
+    total_weekly_cases = sum(weekly_cases, na.rm = TRUE),
+    .groups = "drop"
+  )
+
+covid_US
+
+```
+
+## COVID Cases per State
+This code cleans COVID case data per state
+```{r, warning=FALSE, message=FALSE}
+covidbystate <-read_csv("data/covid_confirmed_usafacts.csv")
+
+covidStatesDaily <- covidbystate %>% 
+  group_by(State) %>% 
+  summarize(across(where(is.numeric), sum, na.rm = TRUE))
+#covidStatesDaily
+
+covidstates <- covidStatesDaily %>% 
+  pivot_longer(
+    cols = -State,
+    names_to = "date",
+    values_to = "cases"
+  ) %>%
+  filter(str_detect(date, "^\\d{4}-\\d{2}-\\d{2}$")) %>%
+  mutate(
+    date = ymd(date),
+    year = year(date)
+  ) %>%
+  group_by(State, year) %>%
+  summarise(total_cases = max(cases, na.rm = TRUE), .groups = "drop")
+
+covidstates
+```
+
+This chunk creates the new variable "severity" to organize the number of each states' cases using summary statistics. 
+```{r, warning=FALSE, message=FALSE}
+case_summary <- summary(covidstates$total_cases)
+#case_summary
+
+covidstates <- covidstates %>% 
+  mutate(
+    severity = case_when(
+      total_cases <= case_summary[1] ~ "Very low",    
+      total_cases <= case_summary[2] ~ "Low", 
+      total_cases <= case_summary[3] ~ "Medium",    
+      total_cases <= case_summary[5] ~ "High", 
+      TRUE ~ "Very high"                              
+    )
+  )
+covidstates <- covidstates %>%
+  mutate(severity = factor(severity, levels = c("Very low", "Low", "Medium", "High", "Very high")))
+covidstates
+```
+
+## ZHVI
+
+This chunk is for cleaning housing data
+
+```{r, warning=FALSE, message=FALSE}
+house <- read_csv("data/State_zhvi_uc_sfrcondo_tier_0.33_0.67_sm_sa_month.csv")
+
+house1 <- house %>%
+  rename(State = RegionName) %>%
+  select(-StateName, -RegionID, -SizeRank, -RegionType)
+
+house_long <- house1 %>%
+  pivot_longer(cols = -State, names_to = "Date", values_to = "ZHVI")
+#house_long
+
+house_long1 <- house_long %>%
+  filter(str_sub(Date, 1, 4) %in% c("2017", "2018", "2019", "2020", "2021", "2022"))
+
+#house_long1
+
+house_long2 <- house_long1 %>%
+  mutate(year = as.numeric(str_sub(Date, 1, 4)))
+
+house_avg <- house_long2 %>%
+  group_by(State, year) %>%
+  summarise(mean_zhvi = mean(ZHVI, na.rm = TRUE), .groups = "drop")
+
+#house_avg
+
+house2 <- house_avg %>%
+  pivot_wider(names_from = year, values_from = mean_zhvi)
+
+#house2
+```
+
+This chunk is to calculate the formula for the rate of change
+```{r, warning=FALSE, message=FALSE}
+
+house3 <- house2 %>%
+  mutate(
+    zhvi_pre_avg = rowMeans(select(., `2017`, `2018`, `2019`), na.rm = TRUE),
+    zhvi_post_avg = rowMeans(select(., `2020`, `2021`, `2022`), na.rm = TRUE),
+    zhvi_pre_change = ((`2019` - `2017`) / `2017`)*100,
+    zhvi_post_change = ((`2022` - `2020`) / `2020`)*100
+  ) %>%
+  select(State, zhvi_pre_avg, zhvi_post_avg, zhvi_pre_change, zhvi_post_change)
+
+#house3
+state_codes <- read.csv("https://raw.githubusercontent.com/jasonong/List-of-US-States/master/states.csv")
+
+house4 <- house3 %>%
+  left_join(state_codes, by = c("State" = "State"))
+
+house_final <- house4  %>%
+  select(Abbreviation, zhvi_pre_avg, zhvi_post_avg, zhvi_pre_change, zhvi_post_change) %>%
+  rename(State = Abbreviation)
+
+house_final 
+```
+
+```{r}
+# export to file but I will # because we already have sync folder with github
+#write.csv(house_final, "data/data-clean/HOUSING.csv", row.names = FALSE)
+```
+
+## Unemployment Rates
+
+This chunk is for cleaning unemployment rate data
+```{r, warning=FALSE, message=FALSE}
+unemploy <- read_excel("data/unemployment rate.xlsx", range = "A1:DR53")
+names(unemploy)[-1] <- as.character(as.Date(as.numeric(names(unemploy)[-1]), origin = "1899-12-30"))
+
+pre_df <- unemploy %>%
+  select(State, `2017-12-01`, `2019-12-01`) %>%
+  # Some is chr so we need to numeric
+  mutate(across(-State, ~ as.numeric(.))) %>%
+  mutate(unemp_pre = `2019-12-01` - `2017-12-01`) %>%
+  rename(unemp_19 = `2019-12-01`, unemp_17=`2017-12-01`) %>% 
+  select(State, unemp_pre, unemp_17 ,unemp_19)
+
+post_df <- unemploy %>%
+  select(State, `2020-12-01`, `2022-12-01`) %>%
+  # Some is chr so we need to numeric
+  mutate(across(-State, ~ as.numeric(.))) %>%
+  mutate(unemp_post = `2022-12-01` - `2020-12-01`) %>%
+  rename(unemp_22 = `2022-12-01`, unemp_20 = `2020-12-01`) %>% 
+  select(State, unemp_post, unemp_20, unemp_22)
+
+unemploy2 <- pre_df %>%
+  inner_join(post_df, by = "State")
+
+unemploy3 <- unemploy2 %>%
+  left_join(state_codes, by = c("State" = "State"))
+
+unemploy_final <- unemploy3 %>% 
+  select(Abbreviation, unemp_pre,unemp_17, unemp_19, unemp_post,unemp_20, unemp_22) %>% 
+  rename(State = Abbreviation)
+
+unemploy_final
+```
+
+```{r}
+# export to file but I will # because we already have sync folder with github
+#write.csv(unemploy_final, "data/data-clean/UNEMPLOY.csv", row.names = FALSE)
+```
+
+## PCE
+
+This chunk is for cleaning Personal consumption expenditures 
+```{r, warning=FALSE, message=FALSE}
+pce <- read.csv("data/SAPCE1__ALL_AREAS_1997_2023.csv")
+
+pce_df <- pce %>%
+  filter(Description == "Personal consumption expenditures ") %>%
+  select(GeoName, X2017, X2019, X2020, X2022) %>%
+  rename(state = GeoName) %>%
+  filter(state != "United States") %>%
+  mutate(
+    pce_pre = ((X2019 - X2017) / X2017) * 100,
+    pce_post = ((X2022 - X2020) / X2020) * 100
+  )
+
+pce_final <- pce_df %>%
+  left_join(state_codes, by = c("state" = "State")) %>%
+  select(Abbreviation, pce_pre, pce_post) %>%
+  rename(State = Abbreviation)
+
+head(pce_final)
+```
+
+```{r}
+# export to file but I will # because we already have sync folder with github
+#write.csv(pce_final, "data/data-clean/PCE.csv", row.names = FALSE)
+```
+
+## Annual Personal Income
+
+This chunk is for cleaning Annual Personal Income
+
+```{r, warning=FALSE, message=FALSE}
+income <- read.csv("data/SAINC1__ALL_AREAS_1929_2024.csv")
+
+income_df1 <- income %>%
+  filter(str_trim(Description) == "Per capita personal income (dollars) 2/") %>%
+  select(GeoName, X2017, X2019, X2020, X2022) %>%
+  rename(state = GeoName) %>%
+  filter(state != "United States") %>%
+  mutate(
+    income_pre = ((X2019 - X2017) / X2017) * 100,
+    income_post = ((X2022 - X2020) / X2020) * 100
+  )
+
+income_final <- income_df1 %>%
+  left_join(state_codes, by = c("state" = "State")) %>%
+  select(Abbreviation, income_pre, income_post) %>%
+  rename(State = Abbreviation)
+
+head(income_final)
+```
+
+```{r}
+# export to file but I will # because we already have sync folder with github
+#write.csv(income_final, "data/data-clean/INCOME.csv", row.names = FALSE)
+```
+
+## GDP
+
+This chunk is for cleaning GDP
+```{r, warning=FALSE, message=FALSE}
+gdp_df <- read.csv("data/SAGDP1__ALL_AREAS_1997_2024.csv")
+
+gdp_real <- gdp_df %>%
+  filter(Description == "Real GDP (millions of chained 2017 dollars) 1/")
+
+gdp_df2 <- gdp_real %>%
+  select(GeoName, X2017, X2019, X2020, X2022) %>%
+  rename(state = GeoName) %>%
+  mutate(
+    gdp_pre = ((X2019 - X2017) / X2017) * 100,
+    gdp_post = ((X2022 - X2020) / X2020) * 100
+  ) %>%
+  filter(state != "United States")
+
+gdp_final <- gdp_df2 %>%
+  left_join(state_codes, by = c("state" = "State")) %>%
+  select(Abbreviation, gdp_pre, gdp_post) %>%
+  rename(State = Abbreviation)
+
+head(gdp_final)
+```
+
+```{r}
+# export to file but I will # because we already have sync folder with github
+#write.csv(gdp_final, "data/data-clean/GDP.csv", row.names = FALSE)
+```
+
+## Population & Debt Statistics
+
+This chunk is to read NYFED data set
+```{r, warning=FALSE, message=FALSE}
+file_path <- "data/area_report_by_year.xlsx"
+
+# There are many sheets so we should target it
+# But auto has diffefent format so we will seperate it
+target_sheets <- c(
+"population",
+"creditcard",
+"mortgage",
+"student loan",
+"total",
+"auto_delinq",
+"creditcard_delinq",
+"mortgage_delinq",
+"studentloan_delinq"
+)
+
+# auto has different format so seperated
+auto <- read_excel(file_path, sheet = "auto", skip = 4, col_names = TRUE)
+#auto
+for (sheet_name in target_sheets) {
+  
+  df_name <- gsub(" ", "_", sheet_name)
+  
+  # The real data start from 9 row in the xlxs file. 
+  df <- read_excel(file_path, sheet = sheet_name, skip = 8, col_names = TRUE)
+  
+  assign(df_name, df)
+  #print(df_name)
+}
+
+# After load the file, it's nice to check but I will make it # to make the document short.
+#population
+#auto
+#creditcard
+#mortgage
+#student_loan
+#total
+#auto_delinq
+#creditcard_delinq
+#mortgage_delinq
+#studentloan_delinq
+```
+
+
+This chunk is for cleaning population
+```{r, warning=FALSE, message=FALSE}
+#population
+population_clean <- population %>%
+  filter(!is.na(state)) %>%
+  mutate(
+    population_pre = ((Q4_2019 - Q4_2017) / Q4_2017) * 100,
+    population_post = ((Q4_2022 - Q4_2020) / Q4_2020) * 100
+  ) %>%
+  select(state, population_pre, population_post)
+
+# population_clean
+```
+
+
+This chunk is for cleaning credit card dept 
+```{r, warning=FALSE, message=FALSE}
+creditcard_clean <- creditcard %>%
+  filter(!is.na(state)) %>%
+  mutate(
+    creditcard_pre = ((Q4_2019 - Q4_2017) / Q4_2017) * 100,
+    creditcard_post = ((Q4_2022 - Q4_2020) / Q4_2020) * 100
+  ) %>%
+  select(state, creditcard_pre, creditcard_post)
+
+# creditcard_clean
+```
+
+This chunk is for cleaning auto dept
+```{r, warning=FALSE, message=FALSE}
+auto_clean <- auto %>%
+  filter(!is.na(state)) %>%
+  mutate(
+    auto_pre = ((Q4_2019 - Q4_2017) / Q4_2017) * 100,
+    auto_post = ((Q4_2022 - Q4_2020) / Q4_2020) * 100
+  ) %>%
+  select(state, auto_pre, auto_post)
+
+# auto_clean
+```
+
+This chunk is for cleaning mortgage
+```{r, warning=FALSE, message=FALSE}
+mortgage_clean <- mortgage %>%
+  filter(!is.na(state)) %>%
+  mutate(
+    mortgage_pre = ((Q4_2019 - Q4_2017) / Q4_2017) * 100,
+    mortgage_post = ((Q4_2022 - Q4_2020) / Q4_2020) * 100
+  ) %>%
+  select(state, mortgage_pre, mortgage_post)
+
+# mortgage_clean
+```
+
+This chunk is for cleaning student loan
+```{r, warning=FALSE, message=FALSE}
+studentloan_clean <- student_loan %>%
+  filter(!is.na(state)) %>%
+  mutate(
+    studentloan_pre = ((Q4_2019 - Q4_2017) / Q4_2017) * 100,
+    studentloan_post = ((Q4_2022 - Q4_2020) / Q4_2020) * 100
+  ) %>%
+  select(state, studentloan_pre, studentloan_post)
+
+# studentloan_clean
+```
+
+This chunk is for cleaning total dept
+```{r, warning=FALSE, message=FALSE}
+total_clean <- total %>%
+  filter(!is.na(state)) %>%
+  mutate(
+    total_pre = ((Q4_2019 - Q4_2017) / Q4_2017) * 100,
+    total_post = ((Q4_2022 - Q4_2020) / Q4_2020) * 100
+  ) %>%
+  select(state, total_pre, total_post)
+
+# total_clean 
+```
+
+This chunk is for cleaning creditcard delinq
+```{r, warning=FALSE, message=FALSE}
+creditcard_delinq_clean <- creditcard_delinq %>%
+  filter(!is.na(state)) %>%
+  select(state, Q4_2019, Q4_2022) %>%
+  rename(
+    creditcard_delinq_pre = Q4_2019,
+    creditcard_delinq_post = Q4_2022
+  )
+
+# creditcard_delinq_clean
+
+```
+
+
+This chunk is for cleaning auto delinq
+```{r, warning=FALSE, message=FALSE}
+auto_delinq_clean <- auto_delinq %>%
+  filter(!is.na(state)) %>%
+  select(state, Q4_2019, Q4_2022) %>%
+  rename(
+    auto_delinq_pre = Q4_2019,
+    auto_delinq_post = Q4_2022
+  )
+
+# auto_delinq_clean
+```
+
+
+This chunk is for cleaning mortgage delinq
+```{r, warning=FALSE, message=FALSE}
+mortgage_delinq_clean <- mortgage_delinq %>%
+  filter(!is.na(state)) %>%
+  select(state, Q4_2019, Q4_2022) %>%
+  rename(
+    mortgage_delinq_pre = Q4_2019,
+    mortgage_delinq_post = Q4_2022
+  )
+
+# mortgage_delinq_clean
+```
+
+
+This chunk is for cleaning studentloan delinq
+```{r, warning=FALSE, message=FALSE}
+studentloan_delinq_clean <- studentloan_delinq %>%
+  filter(!is.na(state)) %>%
+  select(state, Q4_2019, Q4_2022) %>%
+  rename(
+    studentloan_delinq_pre = Q4_2019,
+    studentloan_delinq_post = Q4_2022
+  )
+
+# studentloan_delinq_clean
+```
+
+
+This chunk is to join every data from NEFED
+```{r, warning=FALSE, message=FALSE}
+NYFED_df <- population_clean %>%
+  left_join(creditcard_clean, by = "state") %>%
+  left_join(auto_clean, by = "state") %>%
+  left_join(mortgage_clean, by = "state") %>%
+  left_join(studentloan_clean, by = "state") %>%
+  left_join(total_clean, by = "state") %>%
+  left_join(creditcard_delinq_clean, by = "state") %>%
+  left_join(auto_delinq_clean, by = "state") %>%
+  left_join(mortgage_delinq_clean, by = "state") %>%
+  left_join(studentloan_delinq_clean, by = "state")
+
+head(NYFED_df)
+```
+
+```{r, warning=FALSE, message=FALSE}
+# Export final result if needed
+#write.csv(NYFED_df, "data/data-clean/NYFED.csv", row.names = FALSE)
+```
+
+## Final Data Join
+
+This chunk is to join all the economic data
+```{r, warning=FALSE, message=FALSE}
+clean_gdp <- read_csv("data/data-clean/GDP.csv")
+clean_income <- read_csv("data/data-clean/INCOME.csv")
+clean_nyfed <- read_csv("data/data-clean/NYFED.csv")
+clean_pce <- read_csv("data/data-clean/PCE.csv")
+clean_unemploy <- read_csv("data/data-clean/UNEMPLOY.csv")
+clean_housing<- read_csv("data/data-clean/HOUSING.csv")
+
+#clean_gdp 
+#clean_income
+#clean_nyfed 
+#clean_pce 
+#clean_unemploy 
+
+clean_nyfed  <- clean_nyfed  %>%
+  rename(State = state)
+
+# Find common states
+common_states <- Reduce(intersect, list(
+  clean_gdp$State,
+  clean_income$State,
+  clean_pce$State,
+  clean_nyfed$State,
+  clean_unemploy$State,
+  clean_housing$State
+))
+
+# Apply only common state
+clean_gdp <- clean_gdp %>% filter(State %in% common_states)
+clean_income <- clean_income %>% filter(State %in% common_states)
+clean_pce <- clean_pce %>% filter(State %in% common_states)
+clean_nyfed <- clean_nyfed %>% filter(State %in% common_states)
+clean_unemploy <- clean_unemploy %>% filter(State %in% common_states)
+clean_housing <- clean_housing %>% filter(State %in% common_states)
+
+# Merge to one data set
+merged_df <- clean_housing %>%
+  left_join(clean_gdp, by = "State") %>%
+  left_join(clean_income, by = "State") %>%
+  left_join(clean_pce, by = "State") %>%
+  left_join(clean_nyfed, by = "State") %>%
+  left_join(clean_unemploy, by = "State")
+
+merged_df
+```
+
+```{r}
+# export to file but I will # because we already have sync folder with github
+# write.csv(merged_df, "data/data-clean/FINAL.csv", row.names = FALSE)
+```
+
+# COVID Mapping Visualization (EDA) {.tabset}
+
+This section creates visualizations for the COVID by State dataset
+
+```{r, warning=FALSE, message=FALSE}
+df<- read_csv("data/data-clean/FINAL.csv")
+
+#df
+```
+
+## COVID distribution  {.tabset}
+
+### Severity
+This chunk visualizes the division of severity levels to help determine the distribution of total cases in the US.
+```{r, warning=FALSE, message=FALSE}
+ggplot(covidstates, aes(x = severity, y = total_cases, fill = severity)) +
+  geom_boxplot() +
+  labs(title = "Distribution of Total Cases by Severity Level",
+       x = "Severity", y = "Total Cases") +
+  scale_fill_manual(values = c("Very low" = "lightgreen", "Low" = "yellow", "Medium" = "orange", "High" = "red", "Very high" = "brown")) + theme_minimal()
+```
+
+### By year (2020-2023)
+This chunk describes the severity levels by each year in the US, showing the trend of increasing severity.
+```{r, warning=FALSE, message=FALSE}
+covidstates %>%
+  ggplot(aes(x = year, fill = severity)) +
+  geom_bar(position = "fill") +
+  labs(title = "Distribution of COVID Severity by Year",
+       y = "Proportion of States", x = "Year") +
+  scale_fill_manual(values = c("Very low" = "lightgreen", "Low" = "yellow", "Medium" = "orange", "High" = "red", "Very high" = "brown")) +
+  theme_minimal()
+```
+
+## 6 States
+This code shows the increasing trend of COVID cases over the course of 3 years in 6 major US states.
+```{r, warning=FALSE, message=FALSE}
+covidstates %>%
+  filter(State %in% c("CA", "TX", "NY", "IL", "AZ", "FL")) %>%
+  ggplot(aes(x = year, y = total_cases, color = State)) +
+  geom_line(size = 1.2) +
+  labs(title = "COVID Cases Over Time",
+       x = "Year", y = "Total Cases") +
+  theme_minimal()
+```
+
+## COVID US Map (New)
+This map shows how COVID severity levels have increased across U.S. states from 2020 to 2023.
+```{r, warning=FALSE, message=FALSE}
+
+state_abbreviations <- data.frame(
+  abbreviation = state.abb, 
+  full_name = state.name  
+)
+
+
+covidstatesFULLNAME <- covidstates %>%
+  left_join(state_abbreviations, by = c("State" = "abbreviation")) %>%
+  mutate(State = tolower(full_name))%>%
+  select(-full_name)
+
+# map visualization code
+us_states <- map_data("state")
+us_states$region <- tolower(us_states$region) 
+
+# Merging the map data with the COVID data
+covid_map_data <- us_states %>%
+  left_join(covidstatesFULLNAME, by = c("region" = "State")) %>%
+  filter(!is.na(severity), year %in% c(2020, 2021, 2022, 2023))
+
+
+ggplot(covid_map_data, aes(x = long, y = lat, group = group, fill = severity)) +
+  geom_polygon(color = "black") +
+  coord_fixed(1.1) +
+  facet_wrap(~ year, ncol = 2) +
+  labs(title = "COVID Case Severity by State",
+       fill = "Severity") +
+  scale_fill_manual(values = c("Very low" = "lightgreen", "Low" = "yellow", "Medium" = "orange", "High" = "red", "Very high"= "brown")) +
+  theme_void(base_size = 14) +
+  theme(
+    strip.text = element_text(size = 12, face = "bold"),
+    plot.title = element_text(size = 16, hjust = 0.5),
+    legend.position = "bottom"
+  )
+
+# covidstatesFULLNAME
+# covidstates
+```
+
+# Visuals of Economic Indicators (EDA) {.tabset}
+
+## Population {.tabset}
+
+### Formula
+This formula converts the population value into a rate of change for better analysis.
+
+Variable Name | Formula | Description
+|------------------|--------------------------------|----------------------|
+population_pre | ((Population_2019 - Population_2017) / Population_2017) × 100 | Population growth rate (Pre-COVID)
+population_post | ((Population_2022 - Population_2020) / Population_2020) × 100 | Population growth rate (Post-COVID)
+
+### Pre (2017–2019)
+This heat map shows the rate of change for population in the US by state before the pandemic.
+```{r, warning=FALSE, message=FALSE}
+
+merged_dfLC <- merged_df %>%
+  rename(state = State)
+
+## PRE covid populations
+plot_usmap(data = merged_dfLC, values = "population_pre", regions = "state") +
+  scale_fill_continuous(
+    name = "Population",
+    low = "lightgreen", high = "darkgreen", label = scales::comma
+  ) +
+  labs(title = "Pre-COVID Population (2017–2019)") +
+  theme(legend.position = "right")
+
+```
+
+### Post (2020–2022)
+This heat map shows the rate of change for population in the US by state after the pandemic.
+```{r, warning=FALSE, message=FALSE}
+
+## POST covid populations
+plot_usmap(data = merged_dfLC, values = "population_post", regions = "state") +
+  scale_fill_continuous(
+    name = "Population",
+    low = "lightblue", high = "darkblue", label = scales::comma
+  ) +
+  labs(title = "Post-COVID Population (2020–2022)") +
+  theme(legend.position = "right")
+
+```
+
+### Comparison
+This side-by-side map view of pre- and post-pandemic population rates suggest that population has remained steady before and after COVID.
+```{r, warning=FALSE, message=FALSE}
+###  pre and post side by side
+population_long <- merged_dfLC %>%
+  select(state, population_pre, population_post) %>%
+  pivot_longer(
+    cols = c(population_pre, population_post),
+    names_to = "period",
+    values_to = "population"
+  ) %>%
+  mutate(
+    period = dplyr::recode(period,
+                    "population_pre" = "Pre-COVID (2017–2019)",
+                    "population_post" = "Post-COVID (2020–2022)"),
+    period = factor(period, levels = c("Pre-COVID (2017–2019)", "Post-COVID (2020–2022)"))
+  )
+
+plot_usmap(data = population_long, values = "population", regions = "state") +
+  facet_wrap(~ period) +
+  scale_fill_continuous(
+    name = "Population",
+    low = "lightgreen", high = "darkgreen", label = scales::comma
+  ) +
+  labs(title = "Population: Pre vs. Post COVID") +
+  theme(legend.position = "right")
+
+```
+
+## GDP {.tabset}
+
+### Formula
+This formula converts the GDP value into a rate of change for better analysis.
+
+Variable Name | Formula  | Description
+|------------------|--------------------------------|----------------------| 
+gdp_pre | ((GDP_2019 - GDP_2017) / GDP_2017) × 100 | GDP growth rate (Pre-COVID)
+gdp_post | ((GDP_2022 - GDP_2020) / GDP_2020) × 100 | GDP growth rate (Post-COVID)
+
+### Visual
+This graph compares how much GDP changed in each U.S. state before and after COVID-19.
+
+- The red bars show GDP growth after COVID (from 2020 to 2022).
+
+- The blue bars show GDP growth before COVID (from 2017 to 2019).
+
+We can see that most states had higher growth after COVID (red bars are taller). For example, Florida (FL) had very strong growth after COVID, while North Dakota (ND) had negative growth.
+```{r, warning=FALSE, message=FALSE}
+# compare GDP
+df %>% 
+  select(State, gdp_pre, gdp_post) %>% 
+  ggplot()+
+  geom_bar(mapping = aes(x=reorder(State, -gdp_post), y=gdp_pre
+                         , fill = "GDP pre = ((X2019 - X2017) / X2017) * 100")
+           , stat = "identity"
+           , position = position_nudge(x = -0.3)
+           , width = 0.4)+
+  geom_bar(mapping = aes(x=reorder(State, -gdp_post), y=gdp_post, fill ="GDP post = ((X2022 - X2020) / X2020) * 100")
+           , stat = "identity"
+           , position = position_nudge(x = 0.3)
+           , width = 0.4)+
+  labs(title = "Real GDP Growth: Pre vs Post COVID", y = "GDP Change (%)", x = "")+
+  theme(axis.text.x = element_text(angle = 90, hjust = 1), legend.position = "bottom")
+  
+```
+
+## Income {.tabset}
+
+### Formula
+This formula converts the income value into a rate of change for better analysis.
+
+Variable Name | Formula  | Description
+|------------------|--------------------------------|----------------------| 
+income_pre | ((Income_2019 - Income_2017) / Income_2017) × 100 | Personal income growth (Pre-COVID)
+income_post | ((Income_2022 - Income_2020) / Income_2020) × 100 | Personal income growth (Post-COVID)
+
+### Visual
+
+This graph compares how much people’s income changed in each U.S. state before and after COVID-19.
+
+- The red bars show income growth after COVID (from 2020 to 2022).
+
+- The blue bars show income growth before COVID (from 2017 to 2019).
+
+This chart shows that in many states, income grew more after COVID than before. Colorado (CO) and New Mexico (NM) had high income growth after COVID. In contrast, California (CA) and New York (NY) had smaller increases. After COVID they are hired again, that can be one of reason. 
+```{r, warning=FALSE, message=FALSE}
+df %>%
+  select(State, income_pre, income_post) %>%
+  ggplot() +
+  geom_bar(mapping = aes(x = reorder(State, -income_post)
+                         , y = income_pre
+                         , fill = "Income pre = ((X2019 - X2017) / X2017) * 100")
+           , stat = "identity"
+           , position = position_nudge(x = -0.3)
+           , width = 0.4) +
+  geom_bar(mapping = aes(x = reorder(State, -income_post)
+                         , y = income_post
+                         , fill = "Income post = ((X2022 - X2020) / X2020) * 100")
+           ,stat = "identity"
+           , position = position_nudge(x = 0.3)
+           , width = 0.4) +
+  labs(title = "Personal Income Growth: Pre vs Post COVID", y = "Income Change (%)", x = "") +
+  theme(axis.text.x = element_text(angle = 90, hjust = 1), legend.position = "bottom")
+```
+
+## PCE {.tabset}
+
+### Formula
+This formula converts the personal consumption expenditure value into a rate of change for better analysis.
+
+
+Variable Name | Formula  | Description
+|------------------|--------------------------------|----------------------| 
+pce_pre | ((PCE_2019 - PCE_2017) / PCE_2017) × 100 | PCE growth rate (Pre-COVID)
+pce_post | ((PCE_2022 - PCE_2020) / PCE_2020) × 100 | PCE growth rate (Post-COVID)
+
+### Visual
+
+This graph shows how much people spent money in each U.S. state before and after COVID-19.
+
+- The red bars show spending growth after COVID (2020–2022).
+
+- The blue bars show spending growth before COVID (2017–2019).
+
+When we compare the overall pattern, the difference between pre and post COVID is not very big in most states. People may have continued spending money on basic needs even during hard times.
+
+```{r, warning=FALSE, message=FALSE}
+df %>%
+  select(State, pce_pre, pce_post) %>%
+  ggplot() +
+  geom_bar(mapping = aes(x = reorder(State, -pce_post)
+                         , y = pce_pre
+                         , fill = "PCE pre = ((X2019 - X2017) / X2017) * 100")
+           , stat = "identity"
+           , position = position_nudge(x = -0.3)
+           , width = 0.4) +
+  geom_bar(mapping = aes(x = reorder(State, -pce_post)
+                         , y = pce_post
+                         , fill = "PCE post = ((X2022 - X2020) / X2020) * 100")
+           , stat = "identity"
+           , position = position_nudge(x = 0.3)
+           , width = 0.4) +
+  labs(title = "Personal Consumption Expenditures Growth: Pre vs Post COVID",
+       y = "PCE Change (%)", x = "") +
+  theme(axis.text.x = element_text(angle = 90, hjust = 1), legend.position = "bottom")
+```
+
+## Unemployment Rate {.tabset}
+
+### Formula
+
+Variable Name | Formula  | Description
+|------------------|--------------------------------|----------------------| 
+unemp_pre | Unemp_2019 - Unemp_2017 | Change in unemployment rate (Pre-COVID)
+unemp_post | Unemp_2022 - Unemp_2020 | Change in unemployment rate (Post-COVID)
+
+### Visual
+
+This graph shows how the unemployment rate changed in each U.S. state before and after COVID-19.
+
+- The blue bars show the change from 2017 to 2019.
+
+- The red bars show the change from 2020 to 2022.
+
+Most red bars are below zero(negative), which means unemployment went down after COVID.This is a good, more people were able to find jobs by 2022.
+
+```{r, warning=FALSE, message=FALSE}
+
+df %>%
+  select(State, unemp_pre, unemp_post) %>%
+  ggplot() +
+  geom_bar(aes(x = reorder(State, -unemp_post)
+               , y = unemp_pre, 
+               fill = "Unemp pre = 2019 - 2017")
+           , stat = "identity"
+           , position = position_nudge(x = -0.3)
+           , width = 0.4) +
+  geom_bar(aes(x = reorder(State, -unemp_post)
+               , y = unemp_post
+               , fill = "Unemp post = (2022 - 2020)")
+           , stat = "identity"
+           , position = position_nudge(x = 0.3)
+           , width = 0.4) +
+  labs(title = "Unemployment Rate Change: 2017–2019 vs 2020–2022", y = "Change in Unemployment Rate", x = "") +
+  theme(axis.text.x = element_text(angle = 90, hjust = 1),legend.position = "bottom")
+
+```
+This line graph shows the unemployment rate in each U.S. state from 2017 to 2022.
+
+In 2020, unemployment suddenly went up in almost all states. This happened because of the COVID-19 pandemic. After 2020, the lines go down again. This means that the economy started to recover and people found jobs again.
+```{r, warning=FALSE, message=FALSE}
+
+df_emp <- df %>%
+  select(State, unemp_17, unemp_19, unemp_20, unemp_22)
+
+#df_emp
+
+df_long <- df_emp %>% 
+  pivot_longer(cols = starts_with("unemp_"), names_to = "Year", values_to = "Unemployment") %>%
+  mutate(Year = dplyr::recode(Year,
+                       "unemp_17" = "2017",
+                       "unemp_19" = "2019",
+                       "unemp_20" = "2020",
+                       "unemp_22" = "2022"))
+
+#df_long 
+
+ggplot(df_long, aes(x = Year, y = Unemployment, group = State, color = State)) +
+  geom_line(size = 1) +
+  labs(title = "Unemployment Rate by State", y = "Unemployment Rate (%)", x = "Year") +
+  theme(legend.position = "none")
+```
+
+# Debt & Delinquency Visuals {.tabset}
+
+Interestingly, while credit card and car-related debt increased,
+other types of debt like student loans and mortgages actually went down.
+
+This suggests that government programs or debt relief policies may have helped reduce those types of loans.
+But personal spending and borrowing still increased for many individuals.
+
+## Credit Card {.tabset}
+
+### Fomula
+
+| Variable Name | Formula  | Description |
+|------------------|--------------------------------|----------------------|
+| creditcard_pre | ((Q4_2019 - Q4_2017) / Q4_2017) × 100 | Credit card debt growth rate (Pre-COVID) |
+| creditcard_post | ((Q4_2022 - Q4_2020) / Q4_2020) × 100 | Credit card debt growth rate (Post-COVID) |
+| creditcard_delinq_pre | Q4_2019 | Credit card delinquency rate (Pre-COVID) |
+| creditcard_delinq_post | Q4_2022 | Credit card delinquency rate (Post-COVID) |
+
+### Visual 1
+
+This chart shows how credit card debt changed before and after COVID-19 in each U.S. state.
+
+- The red bars show the growth in credit card debt before COVID.
+
+- The blue bars show the growth after COVID.
+
+In almost state, credit card debt grew more after COVID than before. This means many people used credit cards more
+```{r, warning=FALSE, message=FALSE}
+credit_df <- df %>% 
+  select(State, creditcard_pre, creditcard_post) %>% 
+  pivot_longer(cols = c(creditcard_pre, creditcard_post),
+               names_to = "Time", values_to = "Change") %>% 
+  mutate(Time = factor(Time, levels = c("creditcard_pre", "creditcard_post")))
+
+## credit_df
+
+ggplot(credit_df, aes(x = State, y = Change, fill = Time)) +
+  geom_bar(stat = "identity", position = position_dodge(width = 0.7), width = 0.9) +  
+  labs(title = "Change Rate in Credit Card Dept",
+       y = "Credit Card Dept Change Rate (%)", x = "")+
+  theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust = 1),
+        legend.position = "bottom")
+```
+
+### Visual 2
+
+These violin plots show how credit card debt and delinquency rates changed before and after COVID-19.
+
+**Left chart:**
+- The left shape (red) shows credit card debt changes before COVID.
+
+- The right shape (blue) shows the changes after COVID. The shape is higher and more spread out after COVID, which means credit card debt increased more in many states.
+
+**Right chart:**
+- This chart shows how often people couldn’t pay back their credit card bills on time.
+
+- The shapes are very similar before and after COVID, and even slightly lower after.
+
+```{r, warning=FALSE, message=FALSE, fig.width=10, fig.height=10}
+credit_delinq_df <- df %>% 
+  select(State, creditcard_delinq_pre, creditcard_delinq_post) %>% 
+  pivot_longer(cols = c(creditcard_delinq_pre, creditcard_delinq_post),
+               names_to = "Time", values_to = "Change") %>% 
+  mutate(Time = factor(Time, levels = c("creditcard_delinq_pre", "creditcard_delinq_post")))
+
+#credit_delinq_df
+
+gg_debt <- ggplot(credit_df, aes(x = Time, y = Change, fill = Time)) +
+  geom_violin(trim = FALSE, alpha = 0.5) +
+  labs(title = "Credit Card Debt Change (%)", y = "Change Rate (%)", x = "")+
+  theme(legend.position = "bottom")
+
+#gg_debt 
+
+gg_delinq <- ggplot(credit_delinq_df, aes(x = Time, y = Change, fill = Time)) +
+  geom_violin(trim = FALSE, alpha = 0.5) +
+  labs(title = "Credit Card Delinquency Rate (%)", y = "Delinquency Rate (%)", x = "")+
+  theme(legend.position = "bottom")
+
+#gg_delinq
+
+grid.arrange(gg_debt, gg_delinq, ncol = 2)
+```
+
+## Mortgage {.tabset}
+
+### Formula
+
+Variable Name | Formula | Description
+|------------------|--------------------------------|----------------------|
+mortgage_pre | ((Q4_2019 - Q4_2017) / Q4_2017) × 100 | Mortgage debt growth rate (Pre-COVID)
+mortgage_post | ((Q4_2022 - Q4_2020) / Q4_2020) × 100 | Mortgage debt growth rate (Post-COVID)
+mortgage_delinq_pre | Q4_2019 | Mortgage delinquency rate (Pre-COVID)
+mortgage_delinq_post | Q4_2022 | Mortgage delinquency rate (Post-COVID)
+
+### Visual
+
+These boxplots show how mortgage debt and delinquency rates changed before and after COVID-19.
+
+**Left chart:** This means that mortgage debt grew more slowly after COVID.
+
+**Right chart:**This means fewer people failed to pay their mortgage after COVID.
+
+Even though many people had trouble with income during the pandemic, mortgage debt did not increase and fewer people defaulted on their home loans.
+
+This suggests that government programs or payment support policies helped people manage their mortgage payments during COVID-19.
+
+```{r, warning=FALSE, message=FALSE, fig.width=12, fig.height=12}
+
+#Percent Change in Mortgage Debt Balance per Capita (2017 → 2019)
+qq1 <- ggplot(df, aes(x = "", y = mortgage_pre)) +
+  geom_boxplot(fill = "pink") +
+  labs(title = "Mortgage Debt per Capital -Pre", y = "Mortgage Dept Change Rate (%)")
+
+# Percent Change in Mortgage Debt Balance per Capita (2020 → 2022)
+qq2 <- ggplot(df, aes(x = "", y = mortgage_post)) +
+  geom_boxplot(fill = "skyblue") +
+  labs(title = "Mortgage Debt per Capital - Post", y = "Mortgage Dept Change Rate (%)")
+
+qq3 <- ggplot(df, aes(x = "", y = mortgage_delinq_pre)) +
+  geom_boxplot(fill = "orange") +
+  labs(title = "Mortgage Delinquency - Pre", y = "Delinquency Rate (%)")
+
+qq4 <- ggplot(df, aes(x = "", y = mortgage_delinq_post)) +
+  geom_boxplot(fill = "purple") +
+  labs(title = "Mortgage Delinquency - Post", y = "Delinquency Rate (%)")
+
+grid.arrange(qq1, qq2, qq3, qq4, ncol = 4)
+```
+
+## Student Loan {.tabset}
+
+### Formula 
+Variable Name | Formula | Description
+|------------------|--------------------------------|----------------------|
+studentloan_pre | ((Q4_2019 - Q4_2017) / Q4_2017) × 100 | Student loan debt growth rate (Pre-COVID)
+studentloan_post | ((Q4_2022 - Q4_2020) / Q4_2020) × 100 | Student loan debt growth rate (Post-COVID)
+studentloan_delinq_pre | Q4_2019 | Student loan delinquency rate (Pre-COVID)
+studentloan_delinq_post | Q4_2022 | Student loan delinquency rate (Post-COVID)
+
+### Visual
+
+This graph shows the percentage of people who were behind on their student loan payments before and after COVID.
+
+- The blue bars (pre) are very tall in many statess.
+
+- The red bars (post) are much shorter in many states.
+
+This means that student loan delinquency dropped a lot after COVID. This supports the idea that government programs, like loan payment pauses or forgiveness plans, helped people avoid falling behind on their student loans.
+```{r, warning=FALSE, message=FALSE}
+df %>%
+  select(State, studentloan_delinq_pre, studentloan_delinq_post) %>%
+  ggplot() +
+  geom_bar(aes(x = reorder(State, -studentloan_delinq_post)
+               , y = studentloan_delinq_pre
+               ,fill = "Student Loan pre = Q4_2019")
+           , stat = "identity"
+           , position = position_nudge(x = -0.3)
+           , width = 0.4) +
+  geom_bar(aes(x = reorder(State, -studentloan_delinq_post)
+               , y = studentloan_delinq_post
+               , fill = "Student Loan post = Q4_2022")
+           , stat = "identity"
+           , position = position_nudge(x = 0.3)
+           , width = 0.4) +
+  labs(title = "Student Loan Delinquency: Pre vs Post COVID", y = "Delinquency Rate (%)", x = "") +
+  theme(axis.text.x = element_text(angle = 90, hjust = 1),legend.position = "bottom")
+
+```
+
+These two charts show how student loan debt and delinquency changed before and after COVID-19.
+
+**Left chart:**
+The before COVID is taller and wider, meaning more states had higher increases in student debt.
+
+The after COVID is lower and tighter, showing that student loan debt grew more slowly and in some cases even decreased.
+
+**Right chart:**
+The before COVID shows high and variable delinquency rates.
+
+The after COVID is very short and close to 0.
+
+This strongly supports the idea that government loan pauses, forgiveness programs, or policy help students during and after the pandemic.
+```{r, warning=FALSE, message=FALSE}
+
+student_df <- df %>% 
+  select(State, studentloan_pre, studentloan_post) %>% 
+  pivot_longer(cols = c(studentloan_pre, studentloan_post), names_to = "Time", values_to = "Change") %>%
+  mutate(Time= ifelse(Time == "studentloan_pre", "Pre", "Post"))
+
+#student_df
+
+student_df$Time <- factor(student_df$Time, levels = c("Pre", "Post"))
+
+gg_student <- ggplot(student_df, aes(x = Time, y = Change, fill = Time)) +
+  geom_violin(trim = FALSE, alpha = 0.4) +
+  labs(title = "Student Loan Debt Change (%)", y = "Change Rate (%)", x = "") +
+  scale_fill_manual(values = c( "Pre" = "orange","Post" = "purple"))
+
+#gg_student
+
+#names(df)
+
+student_df2 <- df %>% 
+  select(State, studentloan_delinq_pre, studentloan_delinq_post) %>% 
+  pivot_longer(cols = c(studentloan_delinq_pre, studentloan_delinq_post), names_to = "Time", values_to = "Change") %>%
+  mutate(Time= ifelse(Time == "studentloan_delinq_pre", "Pre", "Post"))
+
+#student_df2
+
+student_df2$Time <- factor(student_df2$Time, levels = c("Pre", "Post"))
+
+gg_student2 <- ggplot(student_df2, aes(x = Time, y = Change, fill = Time)) +
+  geom_violin(trim = FALSE, alpha = 0.4) +
+  labs(title = "Student Loan Debt Deliq Change (%)", y = "Change Rate (%)", x = "") +
+  scale_fill_manual(values = c( "Pre" = "yellow", "Post" = "red"))
+
+#gg_student2
+
+grid.arrange(gg_student, gg_student2, ncol = 2)
+```
+
+## Auto {.tabset}
+
+### Formula
+Variable Name | Formula | Description
+|------------------|--------------------------------|----------------------|
+auto_pre | ((Q4_2019 - Q4_2017) / Q4_2017) × 100 | Auto loan debt growth rate (Pre-COVID)
+auto_post | ((Q4_2022 - Q4_2020) / Q4_2020) × 100 | Auto loan debt growth rate (Post-COVID)
+auto_delinq_pre | Q4_2019 | Auto loan delinquency rate (Pre-COVID)
+auto_delinq_post | Q4_2022 | Auto loan delinquency rate (Post-COVID)
+
+### Visual
+
+This chart shows how car loan amounts and delinquency rates changed before and after COVID-19.
+
+**Auto Loan (Two Left)**
+The green box (post) is higher and wider than the red box (pre). This means people borrowed more for cars after the pandemic.
+
+**Auto Loan Delinquency (Two Right)**
+The purple and blue boxes are similar, but the purple one (post) is slightly lower. This means that even though borrowing increased, people still paid their car loans on time.
+
+```{r, warning=FALSE, message=FALSE}
+df_auto <- df %>%
+  select(auto_pre, auto_post, auto_delinq_pre, auto_delinq_post) %>%
+  pivot_longer(cols = everything(), names_to = "Category", values_to = "Value") %>% 
+  mutate(Category = factor(Category, levels = c("auto_pre", "auto_post", "auto_delinq_pre", "auto_delinq_post")))
+
+
+ggplot(df_auto, aes(x = Category, y = Value, fill = Category)) +
+  geom_boxplot() +
+  theme_minimal() +
+  labs(title = "Boxplots of Auto Loan and Delinquency (Pre vs Post)",
+       x = NULL,
+       y = "Value") +
+  theme(axis.text.x = element_text(angle = 20, hjust = 1), legend.position = "bottom")
+```
+
+# Housing Change Rate Visualizations (New) {.tabset}
+
+## Formula
+This formula converts the Zillow Home Value Index into a an average value as well as a rate of change for both pre- and post-pandemic. We use the change rate in order to conduct better analysis and to minimize the effect of general changes in price levels, further proving the effects of COVID.
+
+Variable Name	| Formula | Description
+|------------------|--------------------------------|----------------------|
+zhvi_post_change |	((ZHVI_2022 - ZHVI_2020) / ZHVI_2020) × 100	| Housing price change rate (Post-COVID)
+zhvi_post_avg |	(ZHVI_2020 + ZHVI_2021 + ZHVI_2022) / 3	| Average housing price during post-COVID years
+zhvi_pre_change |	((ZHVI_2019 - ZHVI_2017) / ZHVI_2017) × 100	| Housing price change rate (Pre-COVID)
+zhvi_pre_avg |	(ZHVI_2017 + ZHVI_2018 + ZHVI_2019) / 3	| Average housing price during pre-COVID years
+
+## Pre (2017–2019)
+This heat map shows the rate of change for housing prices in the US by state before the pandemic.
+```{r, warning=FALSE, message=FALSE}
+merged_dfLC <- merged_df %>%
+  rename(state = State)
+
+## heat map for PRE covid housing change rate
+plot_usmap(data = merged_dfLC, values = "zhvi_pre_change", regions = "state") +
+  scale_fill_continuous(
+    name = "Zillow Home Value Change (%)",
+    low = "lightyellow", high = "red", label = scales::comma
+  ) +
+  labs(title = "Pre-COVID Housing Price Change (2017–2019)") +
+  theme(legend.position = "right")
+
+```
+
+## Post (2020–2022)
+This heat map shows the rate of change for housing prices in the US by state after the pandemic.
+```{r, warning=FALSE, message=FALSE}
+
+## heat map for POST covid housing change rate
+plot_usmap(data = merged_dfLC, values = "zhvi_post_change", regions = "state") +
+  scale_fill_continuous(
+    name = "Zillow Home Value Change (%)",
+    low = "lightblue", high = "darkblue", label = scales::comma
+  ) +
+  labs(title = "Post-COVID Housing Price Change (2020–2022)") +
+  theme(legend.position = "right")
+
+```
+
+## Comparison
+This side-by-side map view of pre- and post-pandemic housing prices suggest that COVID has caused a significant shift in housing prices in the US. Pre-pandemic home prices typically changed by 5-15% annually but post-pandemic home prices have changed by 25-35%. By evaluating the change rate, we are minimizing the effects of inflation and general increases to home value.
+```{r, warning=FALSE, message=FALSE}
+
+### both pre and post, side by side
+
+housing_long <- merged_dfLC %>%
+  select(state, zhvi_pre_change, zhvi_post_change) %>%
+  pivot_longer(
+    cols = c(zhvi_pre_change, zhvi_post_change),
+    names_to = "period",
+    values_to = "change"
+  ) %>%
+  mutate(
+    period = dplyr::recode(period,
+                    "zhvi_pre_change" = "Pre-COVID (2017–2019)",
+                    "zhvi_post_change" = "Post-COVID (2020–2022)")) %>% 
+  mutate(period = factor(period, levels = c("Pre-COVID (2017–2019)", "Post-COVID (2020–2022)")))
+
+
+
+plot_usmap(data = housing_long, values = "change", regions = "state") +
+  facet_wrap(~ period) +
+  scale_fill_continuous(
+    name = "ZHVI Change (%)",
+    low = "lightyellow", high = "red", label = scales::comma
+  ) +
+  labs(title = "Housing Price Change: Pre vs. Post COVID") +
+  theme(legend.position = "right")
+```
+
+#  Statistic (New) {.tabset}
+
+## Paired t-test  {.tabset}
+
+### ZHVI
+This chunk conducts a paired t-test to determine if the average rate of change in housing prices differ after COVID. A Shapiro-Wilk test confirmed that the differences were approximately normally distributed (W = 0.9867, p-value = 0.8337), validating the assumptions of the t-test. The paired t-test results showed a highly significant difference suggesting that COVID had a major impact on raising housing prices across states
+```{r, warning=FALSE, message=FALSE}
+housing_summary <- clean_housing %>%
+  select(State, zhvi_pre_change, zhvi_post_change)
+
+# Run paired t-test 
+t_test_result <- t.test(housing_summary$zhvi_post_change, housing_summary$zhvi_pre_change, 
+                        paired = TRUE, alternative = "two.sided")
+
+
+shapiro.test(housing_summary$zhvi_pre_change - housing_summary$zhvi_post_change )
+
+t_test_result
+```
+
+### Mortgage
+This chunk conducts a paired t-test to determine if there was a difference in mortgage rates after COVID. The Shapiro-Wilk test confirmed that the differences between pre- and post-pandemic mortgage rates were normally distributed (W = 0.97102, p-value = 0.2437), which supports the t-test. The paired t-test revealed a significant difference (t = 25.871, p-value < 2.2e-16)  suggesting that COVID-19 had a  effect on increasing mortgage rates.
+
+```{r, warning=FALSE, message=FALSE}
+mortgage_summary <- merged_df %>%
+  select(State, mortgage_pre, mortgage_post)
+
+# Run paired t-test 
+t_test_result2 <- t.test(merged_df$mortgage_post,merged_df$mortgage_pre, 
+                        paired = TRUE, alternative = "two.sided")
+
+shapiro.test(merged_df$mortgage_post - merged_df$mortgage_pre)
+t_test_result2
+```
+
+### Income
+This chunk performs a paired t-test to assess difference in income after COVID. The Shapiro-Wilk test confirmed that the differences were approximately normally distributed (W = 0.96408, p-value = 0.1245). The paired t-test results showed a significant difference (t = 10.794, p-value = 1.156e-14) suggesting that there was a rise in income levels across states.
+
+```{r, warning=FALSE, message=FALSE}
+income_summary <- merged_df %>%
+  select(State, income_pre, income_post)
+
+# Run paired t-test 
+t_test_result3 <- t.test(merged_df$income_post,merged_df$income_pre, 
+                        paired = TRUE, alternative = "two.sided")
+
+shapiro.test(merged_df$income_post - merged_df$income_pre)
+
+t_test_result3
+```
+
+## Correlation  {.tabset}
+
+### ZHVI
+This assesses the correlation between pre- and post-pandemic housing prices using Pearson's correlation test. The results showed a very strong positive correlation. 
+
+```{r, warning=FALSE, message=FALSE}
+# Correlation between housing prices pre and post
+cor_zhvi <- cor.test(merged_df$zhvi_pre_avg, merged_df$zhvi_post_avg, method = "pearson")
+cor_zhvi
+
+ggplot(merged_df, aes(x = zhvi_pre_avg, y = zhvi_post_avg)) +
+  geom_point(color = "blue") + 
+  geom_smooth(method = "lm", color = "red", se = TRUE) + 
+  labs(
+    title = "Correlation Between Pre and Post COVID Housing Prices",
+    subtitle = "Strong positive correlation between ZHVI pre- and post-pandemic",
+    x = "Pre-COVID Average Housing Prices (ZHVI)",
+    y = "Post-COVID Average Housing Prices (ZHVI)"
+  ) +
+  theme_minimal()
+```
+
+### Mortgage
+This examines the correlation between pre- and post-pandemic mortgage rates. The Pearson correlation coefficient was 0.6335, suggesting a moderate positive relationship. Although strong, this relationship is weaker compared to housing prices.
+
+```{r, warning=FALSE, message=FALSE}
+cor_mort <- cor.test(merged_df$mortgage_pre, merged_df$mortgage_post, method = "pearson")
+cor_mort
+
+ggplot(merged_df, aes(x = mortgage_pre, y = mortgage_post)) +
+  geom_point(color = "blue") + 
+  geom_smooth(method = "lm", color = "red", se = TRUE) + 
+  labs(
+    title = "Correlation Between Pre and Post COVID Mortgage",
+    x = "Pre-COVID Average Mortgage",
+    y = "Post-COVID Average Mortgage"
+  ) +
+  theme_minimal()
+```
+
+### Income
+This examines the correlation between pre- and post-pandemic income levels across states. The Pearson correlation coefficient was 0.3185, suggesting a weak to moderte positive correlation. 
+
+```{r, warning=FALSE, message=FALSE}
+cor_income <- cor.test(merged_df$income_pre, merged_df$income_post, method = "pearson")
+cor_income
+
+ggplot(merged_df, aes(x = income_pre, y = income_post)) +
+  geom_point(color = "blue") + 
+  geom_smooth(method = "lm", color = "red", se = TRUE) + 
+  labs(
+    title = "Correlation Between Pre and Post COVID Income",
+    x = "Pre-COVID Average Income",
+    y = "Post-COVID Average Income"
+  ) +
+  theme_minimal()
+```
+
+## Multiple Linear Regression {.tabset}
+
+Before COVID, housing prices were mainly influenced by population and mortgage.
+After COVID, broader economic factors such as GDP, total debt, and credit card borrowing had a stronger impact.
+
+### ZHVI model 1 (pre)
+
+Most were not statistically significant
+
+Adjusted R²: 0.36 
+
+Not strong individually, but whole model was statistically valid (p = 0.0036)
+
+```{r, warning=FALSE, message=FALSE}
+# Multiple linear regression model
+pre_df <- merged_df %>%
+  select(contains("pre")) %>%
+  select(-zhvi_pre_change, -zhvi_pre_avg)
+
+pre_names <- names(pre_df)
+
+formula_full <- as.formula(paste("zhvi_pre_change ~", paste(pre_names, collapse = " + ")))
+
+model_full1 <- lm(formula_full, data = merged_df)
+
+summary(model_full1)
+```
+
+### ZHVI model 2 (pre)
+
+Used Step function to find best model. 
+
+This chunk is showing process of step function
+```{r, warning=FALSE, message=FALSE, results='hide'}
+model_step1 <- step(model_full1, direction = "both", trace = TRUE)
+```
+
+Population (significant): More people → Higher house price change
+
+Mortgage delinquency (significant): More mortgage trouble → Lower prices
+
+Student loan delinquency: Slight positive effect, but not clear
+
+Spending (PCE): May increase prices, but not strongly proven
+
+**Before COVID, housing prices were influenced more by people and debt especially mortgage.**
+
+```{r, warning=FALSE, message=FALSE}
+summary(model_step1)
+```
+
+
+### ZHVI model 1 (Post)
+
+Adjusted R²: 0.78 and model is very strong (p < 0.00001).
+
+There are some statistically valid values. 
+
+```{r, warning=FALSE, message=FALSE}
+# Multiple linear regression model
+# Multiple linear regression model for POST-COVID variables
+post_df <- merged_df %>%
+  select(contains("post")) %>%
+  select(-zhvi_post_change, -zhvi_post_avg)
+
+post_names <- names(post_df)
+
+formula_full_post <- as.formula(paste("zhvi_post_change ~", paste(post_names, collapse = " + ")))
+
+model_full2 <- lm(formula_full_post, data = merged_df)
+
+summary(model_full2)
+```
+
+### ZHVI model 2 (Post)
+
+Used Step function to find best model. 
+
+This chunk is showing process of step function
+```{r, warning=FALSE, message=FALSE, results='hide'}
+model_step2 <- step(model_full2, direction = "both", trace = TRUE)
+```
+
+GDP (Significant): More GDP → Higher prices
+
+Income : More income → Slightly lower price change 
+
+Spending (PCE): Slight positive effect
+
+Population (very strong): More people → Much higher prices
+
+Credit card debt (very strong): More credit card debt → Lower price change
+
+Total debt: More debt → Higher prices
+
+**After COVID, housing prices were affected by macro economy and spending patterns. Especially credit card debt had a strong negative impact.**
+
+```{r, warning=FALSE, message=FALSE}
+summary(model_step2)
+```
+
+
+
+```{r, warning=FALSE, message=FALSE}
+
+df_stat <- read_csv("data/data-clean/FINAL.csv")
+# df_stat
+```
+
+## ANOVA {.tabset}
+
+In the ANOVA analysis, gdp_post, income_post, and total_post showed statistically significant differences across groups. gdp_post had strong differences between all three groups, while income_post showed that the low group differed from the medium and high groups. unemp_post and creditcard_post did not show significant group differences.
+
+
+| Variable           | ANOVA p-value | Post-Hoc Interpretation                                       | Shapiro p-value | Levene p-value | Equal Variance |
+|--------------------|----------------|----------------------------------------------------------------|------------------|------------------
+| **gdp_post**        | 2.40e-08       | All three groups significantly different from each other     | 0.798            | 0.273            
+| **income_post**     | 0.039          | Low group < Medium & High groups (no difference between Medium & High) | 0.299            | 0.344            
+| **unemp_post**      | 0.122          | No statistically significant differences between groups      | 0.679            | 0.605            
+| **total_post**      | 0.00016        | Differences exist; Post-hoc details required (likely Low vs High) | 0.401            | 0.138            
+| **creditcard_post** | 0.333          | No statistically significant differences between groups      | 0.873            | 0.188            
+
+### Population
+
+For example, states classified in the "Large" population group, such as Florida, Arizona, and Georgia, showed significantly higher housing price changes compared to states with smaller populations. This suggests that states with larger populations experienced a stronger housing market recovery after COVID.
+
+```{r}
+df_stat$pop_group <- cut(df_stat$population_post,
+                    breaks = quantile(df_stat$population_post, probs = c(0, 1/3, 2/3, 1), na.rm = TRUE),
+                    labels = c("Small", "Medium", "Large"),
+                    include.lowest = TRUE)
+
+pop_anova <- aov(zhvi_post_change ~ pop_group, data = df_stat)
+summary(pop_anova)
+
+PostHocTest(pop_anova, method = "lsd")
+
+ggplot(df_stat, aes(x = pop_group, y = zhvi_post_change, fill = pop_group)) +
+  geom_boxplot() +
+  theme_minimal() +
+  labs(title = "Post-COVID Housing Price Change by Population Group",
+       x = "Population Group",
+       y = "zhvi_post_change")
+
+# residual analysis to check the assumptions
+shapiro.test(pop_anova$residuals)  
+
+# Levene's test for homogeneity of variance
+leveneTest(zhvi_post_change ~ factor(pop_group), data = df_stat)
+
+pop_group_table <- df_stat %>%
+  select(State, population_post, zhvi_post_change, pop_group)
+
+
+datatable(pop_group_table,
+          options = list(pageLength = 10, autoWidth = TRUE),
+          caption = "States by Population Group (Small / Medium / Large)")
+```
+
+### Income
+
+In the ANOVA analysis by income group, states categorized as "High" income, such as Colorado, Delaware, and Nevada, showed significantly different housing price changes compared to states in the "Low" income group. However, there was no significant difference between the "High" and "Medium" income groups. This indicates that housing market responses to COVID varied more notably between low and higher-income states.
+
+```{r}
+df_stat$income_group <- cut(df_stat$income_post,
+                       breaks = quantile(df_stat$income_post, probs = c(0, 1/3, 2/3, 1), na.rm = TRUE),
+                       labels = c("Low", "Medium", "High"),
+                       include.lowest = TRUE)
+
+income_anova <- aov(zhvi_post_change ~ income_group, data = df_stat)
+summary(income_anova)
+
+PostHocTest(income_anova, method = "lsd")
+
+ggplot(df_stat, aes(x = income_group, y = zhvi_post_change, fill = income_group)) +
+  geom_boxplot() +
+  theme_minimal() +
+  labs(title = "Housing Price Change by Income Group",
+       x = "Income Group",
+       y = "zhvi_post_change")
+
+# residual analysis to check the assumptions
+shapiro.test(income_anova$residuals)  
+
+# Levene's test for homogeneity of variance
+leveneTest(zhvi_post_change ~ factor(income_group), data = df_stat)
+
+income_group_table <- df_stat %>%
+  select(State, income_post, zhvi_post_change, income_group)
+
+datatable(income_group_table,
+          options = list(pageLength = 10, autoWidth = TRUE),
+          caption = "States by Income Group (Low / Medium / High)")
+```
+### GDP
+
+In the ANOVA analysis by GDP group, states categorized as "High" GDP, such as Florida, Arizona, and Nevada, showed significantly different housing price changes compared to those in the "Low" GDP group. Moreover, significant differences were also observed between the "Medium" and "High" GDP groups, highlighting the strong economic influence on post-COVID housing market trends.
+
+```{r}
+df_stat$gdp_group <- cut(df_stat$gdp_post,
+                         breaks = quantile(df_stat$gdp_post, probs = c(0, 1/3, 2/3, 1), na.rm = TRUE),
+                         labels = c("Low", "Medium", "High"),
+                         include.lowest = TRUE)
+
+gdp_anova <- aov(zhvi_post_change ~ gdp_group, data = df_stat)
+summary(gdp_anova)
+
+PostHocTest(gdp_anova, method = "lsd")
+
+shapiro.test(gdp_anova$residuals)
+
+leveneTest(zhvi_post_change ~ factor(gdp_group), data = df_stat)
+
+ggplot(df_stat, aes(x = gdp_group, y = zhvi_post_change, fill = gdp_group)) +
+  geom_boxplot() +
+  theme_minimal() +
+  labs(title = "Housing Price Change by GDP Group",
+       x = "GDP Group",
+       y = "zhvi_post_change")
+
+gdp_group_table <- df_stat %>%
+  select(State, gdp_post, zhvi_post_change, gdp_group)
+
+datatable(gdp_group_table,
+          options = list(pageLength = 10, autoWidth = TRUE),
+          caption = "States by GDP Group (Low / Medium / High)")
+```
+
+### Unemployment
+
+In the ANOVA analysis by unemployment group, the overall difference in housing price changes was not statistically significant (p = 0.122). However, post-hoc results showed that states in the "High" unemployment group, such as Arkansas, Delaware, and Georgia, had significantly different housing price changes compared to those in the "Low" unemployment group (p = 0.0441). This suggests some localized differences, even though the overall group effect was not strong.
+
+```{r}
+df_stat$unemp_group <- cut(df_stat$unemp_post,
+                           breaks = quantile(df_stat$unemp_post, probs = c(0, 1/3, 2/3, 1), na.rm = TRUE),
+                           labels = c("Low", "Medium", "High"),
+                           include.lowest = TRUE)
+
+unemp_anova <- aov(zhvi_post_change ~ unemp_group, data = df_stat)
+summary(unemp_anova)
+
+PostHocTest(unemp_anova, method = "lsd")
+shapiro.test(unemp_anova$residuals)
+leveneTest(zhvi_post_change ~ factor(unemp_group), data = df_stat)
+
+ggplot(df_stat, aes(x = unemp_group, y = zhvi_post_change, fill = unemp_group)) +
+  geom_boxplot() +
+  theme_minimal() +
+  labs(title = "Housing Price Change by Unemployment Group",
+       x = "Unemployment Group",
+       y = "zhvi_post_change")
+
+unemp_group_table <- df_stat %>%
+  select(State, unemp_post, zhvi_post_change, unemp_group)
+
+datatable(unemp_group_table,
+          options = list(pageLength = 10, autoWidth = TRUE),
+          caption = "States by Unemployment Group (Low / Medium / High)")
+```
+
+### Total Dept
+
+In the ANOVA analysis by total debt group, the differences in housing price changes were statistically significant (p = 0.000157). States classified in the "High" total debt group, such as Arizona, California, and Florida, experienced significantly different housing market trends compared to those in the "Low" and "Medium" groups. However, the Shapiro-Wilk test indicated a slight deviation from normality (p = 0.01876), suggesting that results should be interpreted with some caution.
+
+```{r}
+df_stat$total_group <- cut(df_stat$total_post,
+                           breaks = quantile(df_stat$total_post, probs = c(0, 1/3, 2/3, 1), na.rm = TRUE),
+                           labels = c("Low", "Medium", "High"),
+                           include.lowest = TRUE)
+
+total_anova <- aov(zhvi_post_change ~ total_group, data = df_stat)
+summary(total_anova)
+
+PostHocTest(total_anova, method = "lsd")
+shapiro.test(total_anova$residuals)
+leveneTest(zhvi_post_change ~ factor(total_group), data = df_stat)
+
+ggplot(df_stat, aes(x = total_group, y = zhvi_post_change, fill = total_group)) +
+  geom_boxplot() +
+  theme_minimal() +
+  labs(title = "Housing Price Change by Total Debt Group",
+       x = "Total Debt Group",
+       y = "zhvi_post_change")
+
+total_group_table <- df_stat %>%
+  select(State, total_post, zhvi_post_change, total_group)
+
+datatable(total_group_table,
+          options = list(pageLength = 10, autoWidth = TRUE),
+          caption = "States by Total Debt Group (Low / Medium / High)")
+```
+
+### Credit Card
+
+In the ANOVA analysis by credit card debt group, there was no statistically significant difference in housing price changes across the groups (p = 0.333). Similarly, post-hoc tests revealed no meaningful pairwise differences. States with high credit card debt levels, such as California, Colorado, and Florida, did not show significantly different housing market trends compared to states with lower debt levels.
+
+
+```{r}
+df_stat$creditcard_group <- cut(df_stat$creditcard_post,
+                                breaks = quantile(df_stat$creditcard_post, probs = c(0, 1/3, 2/3, 1), na.rm = TRUE),
+                                labels = c("Low", "Medium", "High"),
+                                include.lowest = TRUE)
+
+creditcard_anova <- aov(zhvi_post_change ~ creditcard_group, data = df_stat)
+summary(creditcard_anova)
+
+PostHocTest(creditcard_anova, method = "lsd")
+shapiro.test(creditcard_anova$residuals)
+leveneTest(zhvi_post_change ~ factor(creditcard_group), data = df_stat)
+
+ggplot(df_stat, aes(x = creditcard_group, y = zhvi_post_change, fill = creditcard_group)) +
+  geom_boxplot() +
+  theme_minimal() +
+  labs(title = "Housing Price Change by Credit Card Debt Group",
+       x = "Credit Card Debt Group",
+       y = "zhvi_post_change")
+
+credit_group_table <- df_stat %>%
+  select(State, creditcard_post, zhvi_post_change, creditcard_group)
+
+datatable(credit_group_table,
+          options = list(pageLength = 10, autoWidth = TRUE),
+          caption = "States by Credit Card Debt Group (Low / Medium / High)")
+```
+
+
+## Decision Tree
+
+The decision tree highlights gdp_post as the most important variable for splitting the data, followed by population_post, creditcard_post, total_post, and income_post. The tree structure shows how these variables help predict the housing market trends after COVID, with gdp_post being the primary factor.
+
+```{r}
+tree_model <- rpart(zhvi_post_change ~ zhvi_post_avg + population_post + gdp_post + income_post + unemp_post + total_post + creditcard_post
+                    ,data = df_stat
+                    ,method = "anova"
+                    ,control = rpart.control(cp = 0.0001,minsplit = 10, minbucket = 4)) # it's not class because our house price is 
+
+rpart.plot(tree_model,
+           extra = 101,      
+           fallen.leaves = TRUE,
+           main = "Decision Tree")
+
+tree_model$variable.importance
+
+node_assignments <- tree_model$where
+
+tree_nodes <- data.frame(State = df_stat$State, Node = node_assignments)
+
+#tree_nodes
+datatable(tree_nodes, 
+          filter = "top",
+          caption = "state")
+```
+
+## Clustering{.tabset}
+
+In the clustering analysis based on GDP, Income, and Population, six distinct clusters and four distinct clusters were identified. Each cluster shows different distributions of housing price changes, suggesting that states with similar economic and demographic profiles experienced similar patterns in housing market shifts.
+
+### 6 vars
+
+In the clustering analysis, five distinct groups were identified. For example, Cluster 4, which includes states like Florida, Arizona, and Texas, experienced the highest increase in housing prices. In contrast, Cluster 5, with states such as Arkansas, Delaware, and Iowa, showed more moderate price changes. This clustering highlights regional patterns in how different areas' housing markets responded to the pandemic.
+
+```{r}
+clusters <- c("population_post", "gdp_post", "income_post", "unemp_post", "total_post", "zhvi_post_avg")
+cluster_z <- scale(df_stat[, clusters] )
+
+set.seed(612)
+kmeans <- kmeans(cluster_z, centers = 5)
+
+#kmeans
+
+df_stat$cluster <- as.factor(kmeans$cluster)
+
+ggplot(df_stat, aes(x = cluster, y = zhvi_post_change, fill = cluster)) +
+  geom_boxplot() +
+  theme_minimal() +
+  labs(title = "Cluster for Post COVID",
+       x = "Cluster Group",
+       y = "zhvi_post_change")
+
+cluster_nodes <- data.frame(State = df_stat$State, Cluster = df_stat$cluster)
+
+#cluster_nodes
+split(cluster_nodes$State, cluster_nodes$Cluster)
+```
+
+```{r}
+cluster_summary <- aggregate(df_stat[, clusters], by = list(Cluster = df_stat$cluster), FUN = mean)
+cluster_summary[ , -1] <- round(cluster_summary[ , -1], 2)
+print(cluster_summary)
+```
+
+### 4 vars
+
+Through clustering analysis based on GDP, income, and population, average housing price after COVID, six distinct groups of states were identified. Cluster 5, which includes California, Washington, D.C., and Hawaii, showed the highest average housing prices. Meanwhile, Cluster 1, containing states like Arkansas, Iowa, and Nebraska, exhibited relatively lower housing prices and economic indicators. These results reveal how economic differences across regions can influence patterns in the housing market.
+
+```{r}
+clusters2 <- c("population_post", "income_post", "total_post", "zhvi_post_avg")
+cluster_z2 <- scale(df_stat[, clusters2])
+
+set.seed(612)
+kmeans2 <- kmeans(cluster_z2, centers = 6)
+df_stat$cluster2 <- as.factor(kmeans2$cluster)
+
+ggplot(df_stat, aes(x = cluster2, y = zhvi_post_change, fill = cluster2)) +
+  geom_boxplot() +
+  theme_minimal() +
+  labs(title = "Clustering: GDP + Income + Population",
+       x = "Cluster",
+       y = "Housing Price Change (%)")
+```
+
+```{r}
+cluster_nodes2 <- data.frame(State = df_stat$State, Cluster = df_stat$cluster2)
+split(cluster_nodes2$State, cluster_nodes2$Cluster)
+```
+
+```{r}
+cluster_summary2 <- aggregate(df_stat[, clusters2], by = list(Cluster = df_stat$cluster2), FUN = mean)
+cluster_summary2[ , -1] <- round(cluster_summary2[ , -1], 2)
+print(cluster_summary2)
+```
